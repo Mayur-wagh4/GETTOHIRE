@@ -23,4 +23,4 @@ RUN npm run build
 EXPOSE ${PORT:-5173}
 
 # Start the application
-CMD [ "npm", "run", "preview" ]
+CMD [ "npm", "run", "dev", "--", "--host", "0.0.0.0" ]
