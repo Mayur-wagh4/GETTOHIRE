@@ -1,7 +1,7 @@
 import { Button, Input, Typography } from "@material-tailwind/react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from "react-router-dom";
 import { signin } from "../../../assets/assets";
 import { loginCandidate } from '../../../redux/slices/candidateSlice';

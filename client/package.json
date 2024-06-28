@@ -21,6 +21,7 @@
     "@reduxjs/toolkit": "^2.2.5",
     "apexcharts": "3.44.0",
     "axios": "^1.6.8",
+    "popper.js": "^1.16.1",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "chart.js": "^4.4.3",
