@@ -17,7 +17,7 @@ RUN npm install -f
 COPY . .
 
 # Build the Vite project
-RUN npm run build
+# RUN npm run build
 
 # Expose the port (default Vite port is 5173)
 EXPOSE ${PORT:-5173}
