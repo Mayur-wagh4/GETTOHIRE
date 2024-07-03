@@ -21,7 +21,7 @@ import {
 } from "@material-tailwind/react";
 import { AnimatePresence, motion } from "framer-motion";
 import React, { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { LogoNewImage } from '../../../assets/assets';
 
 const SidebarWithBurgerMenu = ({ Navopen, onClose }) => {
@@ -35,14 +35,20 @@ const SidebarWithBurgerMenu = ({ Navopen, onClose }) => {
 
   const handleLogout = () => {
     console.log("logged out");
-    navigate("/admin/admin-login");
+    navigate("/admin-login");
+    onClose();
+  };
+
+  const handleNavItemClick = (path) => {
+    navigate(path);
+    onClose();
   };
 
   const sidebarVariants = {
-    open: { x: 0, transition: { type: "spring", stiffness: 300, damping: 30 } },
+    open: { x: 0, transition: { type: "tween", duration: 0.3, ease: "easeInOut" } },
     closed: {
       x: "-100%",
-      transition: { type: "spring", stiffness: 300, damping: 30 },
+      transition: { type: "tween", duration: 0.3, ease: "easeInOut" },
     },
   };
 
@@ -88,7 +94,7 @@ const SidebarWithBurgerMenu = ({ Navopen, onClose }) => {
   return (
     <AnimatePresence>
       {Navopen && (
-        <Drawer open={Navopen} onClose={onClose} className="p-0">
+        <Drawer open={Navopen} onClose={onClose} className="p-0 overflow-hidden bg-transparent ">
           <motion.div
             initial="closed"
             animate="open"
@@ -107,18 +113,12 @@ const SidebarWithBurgerMenu = ({ Navopen, onClose }) => {
                   size="lg"
                   src={LogoNewImage}
                   alt="Admin"
-                  className="border-2 border-white"
+                  className="border-2 object-contain bg-blue-900 border-white"
                 />
                 <div>
-                  <Typography
-                    variant="h4"
-                    color="white"
-                    className="font-bold mb-1"
-                  >
-                    Admin Dashboard
-                  </Typography>
+               
                   <Typography color="white" className="opacity-80 text-sm">
-                    Welcome back, John Doe
+                    Welcome back, Admin
                   </Typography>
                 </div>
               </motion.div>
@@ -175,37 +175,35 @@ const SidebarWithBurgerMenu = ({ Navopen, onClose }) => {
                                 animate="visible"
                                 transition={{ delay: linkIndex * 0.1 }}
                               >
-                                <Link to={link.path}>
-                                  <ListItem
-                                    className={`rounded-lg transition-colors ${
-                                      location.pathname === link.path
-                                        ? "bg-white/20 text-white"
-                                        : "hover:bg-white/10"
-                                    }`}
-                                  >
-                                    {link.name}
-                                  </ListItem>
-                                </Link>
+                                <ListItem
+                                  className={`rounded-lg transition-colors ${
+                                    location.pathname === link.path
+                                      ? "bg-white/20 text-white"
+                                      : "hover:bg-white/10"
+                                  }`}
+                                  onClick={() => handleNavItemClick(link.path)}
+                                >
+                                  {link.name}
+                                </ListItem>
                               </motion.div>
                             ))}
                           </List>
                         </AccordionBody>
                       </Accordion>
                     ) : (
-                      <Link to={section.path}>
-                        <ListItem
-                          className={`rounded-lg transition-colors ${
-                            location.pathname === section.path
-                              ? "bg-white/20 text-white"
-                              : "hover:bg-white/10"
-                          }`}
-                        >
-                          <ListItemPrefix>
-                            <section.icon className="h-5 w-5" />
-                          </ListItemPrefix>
-                          {section.title}
-                        </ListItem>
-                      </Link>
+                      <ListItem
+                        className={`rounded-lg transition-colors ${
+                          location.pathname === section.path
+                            ? "bg-white/20 text-white"
+                            : "hover:bg-white/10"
+                        }`}
+                        onClick={() => handleNavItemClick(section.path)}
+                      >
+                        <ListItemPrefix>
+                          <section.icon className="h-5 w-5" />
+                        </ListItemPrefix>
+                        {section.title}
+                      </ListItem>
                     )}
                   </motion.div>
                 ))}
@@ -217,20 +215,19 @@ const SidebarWithBurgerMenu = ({ Navopen, onClose }) => {
                   initial="hidden"
                   animate="visible"
                 >
-                  <Link to="/admin/notifications">
-                    <ListItem
-                      className={`rounded-lg transition-colors ${
-                        location.pathname === "/admin/notifications"
-                          ? "bg-white/20"
-                          : "hover:bg-white/10"
-                      }`}
-                    >
-                      <ListItemPrefix>
-                        <InboxIcon className="h-5 w-5" />
-                      </ListItemPrefix>
-                      Notifications
-                    </ListItem>
-                  </Link>
+                  <ListItem
+                    className={`rounded-lg transition-colors ${
+                      location.pathname === "/admin/notifications"
+                        ? "bg-white/20"
+                        : "hover:bg-white/10"
+                    }`}
+                    onClick={() => handleNavItemClick("/admin/notifications")}
+                  >
+                    <ListItemPrefix>
+                      <InboxIcon className="h-5 w-5" />
+                    </ListItemPrefix>
+                    Notifications
+                  </ListItem>
                 </motion.div>
 
                 <motion.div

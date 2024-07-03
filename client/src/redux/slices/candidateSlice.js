@@ -1,7 +1,11 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:3000/api-v1';
+
+
+
+const BASE_URL = 'http://43.204.238.196:3000/api-v1';
+// const BASE_URL = 'http://localhost:3000/api-v1';
 
 // Utility function to get the auth token from the state
 const getAuthToken = (getState) => {
@@ -133,7 +137,6 @@ export const applyJob = createAsyncThunk(
     }
   }
 );
-
 const candidateSlice = createSlice({
   name: 'candidate',
   initialState: {
@@ -147,6 +150,9 @@ const candidateSlice = createSlice({
     error: null,
   },
   reducers: {
+    clearError: (state) => {
+      state.error = null;
+    },
     logoutCandidate: (state) => {
       state.token = null;
       state.userId = null;
@@ -156,7 +162,7 @@ const candidateSlice = createSlice({
       state.appliedJobs = [];
       state.jobPosts = [];
       state.jobDetails = null;
-    },
+    }
   },  extraReducers: (builder) => {
     builder
       .addCase(registerCandidate.pending, (state) => {
@@ -184,6 +190,7 @@ const candidateSlice = createSlice({
           state.token = action.payload.token;
           state.details = action.payload.user;
           state.userId = action.payload.user._id;
+        
         } else {
           state.loading = false;
           state.error = 'Invalid response from server';
@@ -229,7 +236,7 @@ const candidateSlice = createSlice({
       .addCase(fetchAppliedJobs.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || 'Failed to fetch applied jobs';
-        state.appliedJobs = [];
+        state.appliedJobs = action.payload;
       })
       .addCase(fetchJobPosts.pending, (state) => {
         state.loading = true;
@@ -253,6 +260,9 @@ const candidateSlice = createSlice({
       })
       .addCase(applyJob.fulfilled, (state, action) => {
         state.loading = false;
+        state.appliedJobs.push(action.payload);
+        // Remove the applied job from jobPosts
+        state.jobPosts = state.jobPosts.filter(job => job._id !== action.payload._id);
       })
       .addCase(applyJob.rejected, (state, action) => {
         state.loading = false;
@@ -263,4 +273,5 @@ const candidateSlice = createSlice({
 
 export const { logoutCandidate } = candidateSlice.actions;
 
+export const { clearError } = candidateSlice.actions;
 export default candidateSlice.reducer;

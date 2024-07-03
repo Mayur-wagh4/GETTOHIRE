@@ -1,0 +1,16 @@
+version: "3"
+services:
+  app:
+    container_name: gettohire_server
+    image: gettohire_server
+    restart: always
+    ports:
+    - "${PORT}:${PORT}"
+  mongo:
+    container_name: mongo
+    image: mongo
+    restart: always
+    volumes:
+    - ./data:/data/db
+    ports:
+    - '27017:27017'

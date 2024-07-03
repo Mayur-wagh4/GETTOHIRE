@@ -1,6 +1,6 @@
 import { EyeIcon, TrashIcon } from "@heroicons/react/24/solid";
-import { Button, Chip, Typography } from "@material-tailwind/react";
-import { AnimatePresence, motion } from 'framer-motion';
+import { Button, Card, CardBody, CardFooter, Chip, Typography } from "@material-tailwind/react";
+import { motion } from 'framer-motion';
 import React, { useState } from 'react';
 
 const RestaurantCard = ({ restaurant, onDelete }) => {
@@ -22,64 +22,123 @@ const RestaurantCard = ({ restaurant, onDelete }) => {
 
   return (
     <motion.div
-      className="bg-white shadow-lg rounded-xl p-6 overflow-hidden"
-      whileHover={{ y: -5 }}
-      transition={{ duration: 0.3 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="w-full"
     >
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
-        <div className="mb-4 md:mb-0">
-          <Typography variant="h5" color="blue-gray" className="font-bold mb-2">
+      <Card className="rounded-2xl shadow-xl bg-white overflow-hidden transition-all duration-300">
+        <CardBody className="text-center px-6 py-8">
+          <Typography variant="h4" className="mb-4 font-bold text-blue-gray-800">
             {restaurantName}
           </Typography>
-          <Typography color="blue-gray" className="font-medium mb-1">
-            {restaurantCity}
-          </Typography>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {typeOfCuisines.map((cuisine, index) => (
-              <Chip key={index} value={cuisine} size="sm" variant="outlined" color="blue-gray" />
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-left">
+            <div className="mb-2">
+              <Typography className="font-semibold text-blue-gray-600">
+                City:
+              </Typography>
+              <Typography className="text-blue-gray-800">
+                {restaurantCity}
+              </Typography>
+            </div>
+            <div className="mb-2">
+                <Typography className="font-semibold text-blue-gray-600">
+                  Email:
+                </Typography>
+                <Typography className="text-blue-gray-800">
+                  {email}
+                </Typography>
+              </div>
+         
+            <div className="mb-2">
+              <Typography className="font-semibold text-blue-gray-600">
+                Mobile Number:
+              </Typography>
+              <Typography className="text-blue-gray-800">
+                {mobileNumber}
+              </Typography>
+            </div>
+          {showDetails && (
+            <>
+            <div className="mb-2">
+              <Typography className="font-semibold text-blue-gray-600">
+                Type of Cuisines:
+              </Typography>
+              <div className="flex flex-wrap gap-2">
+                {typeOfCuisines.map((cuisine, index) => (
+                  <Chip key={index} value={cuisine} size="sm" variant="outlined" color="blue-gray" />
+                ))}
+              </div>
+            </div>
+              <div className="mb-2">
+                <Typography className="font-semibold text-blue-gray-600">
+                  Duty Timings:
+                </Typography>
+                <Typography className="text-blue-gray-800">
+                  {dutyTimings}
+                </Typography>
+              </div>
+              <div className="mb-2">
+                <Typography className="font-semibold text-blue-gray-600">
+                  Food Accommodation:
+                </Typography>
+                <Typography className="text-blue-gray-800">
+                  {foodAccommodation ? 'Yes' : 'No'}
+                </Typography>
+              </div>
+              <div className="mb-2">
+                <Typography className="font-semibold text-blue-gray-600">
+                  Created At:
+                </Typography>
+                <Typography className="text-blue-gray-800">
+                  {new Date(createdAt).toLocaleDateString()}
+                </Typography>
+              </div>
+              <div className="mb-2">
+                <Typography className="font-semibold text-blue-gray-600">
+                  Updated At:
+                </Typography>
+                <Typography className="text-blue-gray-800">
+                  {new Date(updatedAt).toLocaleDateString()}
+                </Typography>
+              </div>
+              
+            </>
+          )}
           </div>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button
-            color="blue"
-            variant="outlined"
-            size="sm"
-            onClick={toggleDetails}
-            className="flex items-center gap-2"
-          >
-            <EyeIcon className="h-4 w-4" /> {showDetails ? "Hide" : "View"}
-          </Button>
-          <Button
-            color="red"
-            variant="outlined"
-            size="sm"
-            onClick={() => onDelete(_id)}
-            className="flex items-center gap-2"
-          >
-            <TrashIcon className="h-4 w-4" /> Delete
-          </Button>
-        </div>
-      </div>
-      
-      <AnimatePresence>
-        {showDetails && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-left mt-4 overflow-hidden"
-          >
-            <DetailItem label="Duty Timings" value={dutyTimings} />
-            <DetailItem label="Food Accommodation" value={foodAccommodation ? 'Yes' : 'No'} />
-            <DetailItem label="Mobile Number" value={mobileNumber} />
-            <DetailItem label="Created At" value={new Date(createdAt).toLocaleDateString()} />
-            <DetailItem label="Updated At" value={new Date(updatedAt).toLocaleDateString()} />
-            <DetailItem label="Email" value={email} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+        </CardBody>
+        <CardFooter className="flex justify-left items-center pt-0 gap-4">
+          <div className="flex flex-row gap-4">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button
+                color="blue"
+                variant="gradient"
+                onClick={toggleDetails}
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-all duration-300"
+              >
+                <EyeIcon className="h-5 w-5" />
+              </Button>
+            </motion.div>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button
+                color="red"
+                variant="gradient"
+                onClick={() => onDelete(_id)}
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-all duration-300"
+              >
+                <TrashIcon className="h-5 w-5" />
+              </Button>
+            </motion.div>
+          </div>
+        </CardFooter>
+      </Card>
     </motion.div>
   );
 };

@@ -35,17 +35,16 @@ const Footer = () => {
           {/* Quick Links */}
           <FooterSection title="Quick Links" items={QUICK_LINKS} />
 
-          {/* Contact Information */}
-          <div className="w-full sm:w-1/2 lg:w-auto mb-8 lg:mb-0 text-center lg:text-centre">
-            <Typography variant="h6" className="font-bold mb-4 text-deep-orange-400">
-              Contact Information
-            </Typography>
-            <div className="flex flex-col  justify-center space-y-3">
-              <ContactItem icon={FaMapMarkerAlt} href="https://www.google.com/maps/place/Pune,+Maharashtra,+India" text="Pune, Maharashtra" />
-              <ContactItem icon={FaEnvelope} href="mailto:gettohire99@gmail.com" text="gettohire99@gmail.com" />
-            </div>
-          </div>
-
+{/* Contact Information */}
+<div className="w-full sm:w-1/2 lg:w-auto mb-8 lg:mb-0 text-center">
+  <Typography variant="h6" className="font-bold mb-4 text-deep-orange-400">
+    Contact Information
+  </Typography>
+  <div className="flex flex-col items-center space-y-3">
+    <ContactItem icon={FaMapMarkerAlt} href="https://www.google.com/maps/place/Pune,+Maharashtra,+India" text="Pune, Maharashtra" />
+    <ContactItem icon={FaEnvelope} href="mailto:gettohire99@gmail.com" text="gettohire99@gmail.com" />
+  </div>
+</div>
           {/* Usage Policy */}
           <FooterSection title="Usage Policy" items={TERMS_AND_CONDITIONS} />
         </div>
@@ -93,7 +92,6 @@ const FooterSection = ({ title, items }) => (
     </ul>
   </div>
 );
-
 const ContactItem = ({ icon: Icon, href, text }) => (
   <a href={href} target="_blank" rel="noopener noreferrer" className="flex items-center hover:text-orange-400 transition-colors duration-300">
     <Icon className="mr-2" />

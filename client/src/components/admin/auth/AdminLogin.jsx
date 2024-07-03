@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { LogoNewImage } from "../../../assets/assets";
 import { signInAdmin } from '../../../redux/slices/adminSlice';
+
 import Footer from '../../common/footer';
 import ComplexNavbar from '../../common/navbar';
 
@@ -12,28 +13,36 @@ export function SignIn() {
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const navigateTo = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { loading, error: signInError } = useSelector((state) => state.admin);
+  const signInError = useSelector((state) => state.admin.error);
+
+ 
 
   const handleSignIn = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError("");
+    setLoading(true);
+    setError(null);
 
     try {
-      await dispatch(signInAdmin({ username: userId, password }));
-
-      // Navigate to the admin page upon successful sign-in
-      navigateTo("/admin");
-    } catch (error) {
-      console.error('Sign in error:', error);
-      setError(signInError || "Sign in failed");
+      const resultAction = await dispatch(signInAdmin({ username: userId, password }));
+      if (signInAdmin.fulfilled.match(resultAction)) {
+        navigate('/admin');
+      } else {
+        setError("Login failed. Please check your credentials and try again.");
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    setIsLoading(false);
   };
+
+  
+
+
+
 
   return (
     <>
@@ -71,8 +80,8 @@ export function SignIn() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <Button className="mt-6 transition-all hover:bg-blue-600 hover:shadow-lg" fullWidth type="submit" disabled={isLoading}>
-              {isLoading ? "Signing In..." : "Sign In"}
+            <Button className="mt-6 transition-all hover:bg-blue-600 hover:shadow-lg" fullWidth type="submit" disabled={loading}>
+              {loading ? "Signing In..." : "Sign In"}
             </Button>
             {error && (
               <Typography variant="paragraph" className="text-red-500 mt-4">
@@ -83,11 +92,10 @@ export function SignIn() {
         </div>
         <div className="w-full lg:w-2/5 hidden lg:block">
           <motion.img
-
-      src={LogoNewImage}
-      className="w-[20] h-auto object-cover transition-transform duration-500 ease-in-out"
-      alt="Pattern"
-    />
+            src={LogoNewImage}
+            className="w-[20] h-auto object-cover transition-transform duration-500 ease-in-out"
+            alt="Pattern"
+          />
         </div>
       </motion.section>
       <Footer className="fixed bottom-0 w-full" />

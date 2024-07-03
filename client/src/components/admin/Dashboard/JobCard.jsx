@@ -9,6 +9,9 @@ import {
   Card,
   CardBody,
   CardFooter,
+  Dialog,
+  DialogBody,
+  DialogFooter,
   Typography,
 } from "@material-tailwind/react";
 import { motion } from "framer-motion";
@@ -16,6 +19,7 @@ import React, { useState } from "react";
 
 const JobCard = ({ job, onDelete, deleteInProgress }) => {
   const [showAllDetails, setShowAllDetails] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const toggleDetails = () => {
     setShowAllDetails(!showAllDetails);
@@ -33,6 +37,15 @@ const JobCard = ({ job, onDelete, deleteInProgress }) => {
     { label: "Location", value: `${job.location}, ${job.country}` },
     { label: "Salary", value: `$${job.salary.toLocaleString()}` },
   ];
+
+  const handleDelete = () => {
+    setShowConfirmDialog(true);
+  };
+
+  const confirmDelete = () => {
+    setShowConfirmDialog(false);
+    onDelete(job._id);
+  };
 
   return (
     <motion.div
@@ -79,7 +92,7 @@ const JobCard = ({ job, onDelete, deleteInProgress }) => {
               className="flex items-center justify-center gap-2 px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-all duration-300"
             >
               <EyeIcon className="h-5 w-5" />
-              {showAllDetails ? "Hide Details" : "View Details"}
+
               {showAllDetails ? (
                 <ChevronUpIcon className="h-4 w-4" />
               ) : (
@@ -91,16 +104,40 @@ const JobCard = ({ job, onDelete, deleteInProgress }) => {
             <Button
               color="red"
               variant="gradient"
-              onClick={() => onDelete(job._id)}
+              onClick={handleDelete}
               disabled={deleteInProgress}
               className="flex items-center justify-center gap-2 px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-all duration-300"
             >
               <TrashIcon className="h-5 w-5" />{" "}
-              {deleteInProgress ? "Deleting..." : "Delete"}
             </Button>
           </motion.div>
         </CardFooter>
       </Card>
+
+      <Dialog open={showConfirmDialog} handler={setShowConfirmDialog}>
+        <DialogBody>
+          <Typography className="text-blue-gray-800 font-medium">
+            Are you sure you want to delete this job?
+          </Typography>
+        </DialogBody>
+        <DialogFooter>
+          <Button
+            variant="gradient"
+            color="red"
+            onClick={confirmDelete}
+            className="mr-1"
+          >
+            Yes
+          </Button>
+          <Button
+            variant="gradient"
+            color="blue-gray"
+            onClick={() => setShowConfirmDialog(false)}
+          >
+            No
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </motion.div>
   );
 };

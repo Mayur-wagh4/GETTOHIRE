@@ -1,0 +1,11 @@
+version: "3"
+services:
+  app:
+    container_name: gettohire_client
+    image: gettohire_client
+    restart: always
+    ports:
+        - "${PORT:-5173}:${PORT:-5173}"
+    environment:
+      - PORT=${PORT:-5173}
+

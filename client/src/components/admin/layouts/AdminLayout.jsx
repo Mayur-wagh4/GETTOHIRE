@@ -1,7 +1,6 @@
 import {
   BriefcaseIcon,
   BuildingOfficeIcon,
-  Cog6ToothIcon,
   DocumentCheckIcon,
   Bars2Icon as HeroMenuIcon,
   MoonIcon,
@@ -9,7 +8,7 @@ import {
   UserGroupIcon
 } from "@heroicons/react/24/solid";
 import { Avatar, IconButton, Tooltip, Typography } from '@material-tailwind/react';
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, Outlet } from 'react-router-dom';
@@ -97,7 +96,7 @@ const AdminLayout = () => {
                 size="md"
                 variant="circular"
                 alt="Admin User"
-                className="border-2 object-contain border-deep-orange-500 p-0.5"
+                className={`border-2 object-contain ${isDarkMode ? 'bg-gray-900' : ' bg-gradient-to-r from-blue-500 to-purple-500'}   border-deep-orange-500 p-0.5`}
                 src={LogoNewImage}
               />
             </div>
@@ -127,28 +126,7 @@ const AdminLayout = () => {
       </div>
 
       {/* Settings Button Section */}
-      <AnimatePresence>
-        <motion.div
-          key="settings-button"
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0, opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="fixed bottom-8 right-8 z-40"
-        >
-          <Tooltip content="Settings">
-            <IconButton
-              size="lg"
-              color={isDarkMode ? "white" : "blue"}
-              className={`rounded-full shadow-xl ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-blue-600'} transition-all duration-300`}
-              ripple={true}
-              onClick={() => {/* Add your configurator open logic here */}}
-            >
-              <Cog6ToothIcon className="h-5 w-5" />
-            </IconButton>
-          </Tooltip>
-        </motion.div>
-      </AnimatePresence>
+      
     </div>
   );
 };

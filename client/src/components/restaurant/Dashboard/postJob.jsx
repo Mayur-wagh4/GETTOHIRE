@@ -1,19 +1,27 @@
-import { Button, Card, CardBody, CardFooter, CardHeader, Input, Option, Select, Typography } from '@material-tailwind/react';
+import { Button, Card, CardBody, CardFooter, CardHeader, Dialog, Input, Option, Select, Typography } from '@material-tailwind/react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FaGlobeAmericas, FaMapMarkerAlt } from "react-icons/fa";
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { createAbroadJob, createJob, fetchRestaurantDetails } from '../../../redux/slices/restaurantSlice';
+const FIXED_PRICE = 499;
+
+const jobDepartmentOptions = {
+  Kitchen: ['Executive Chef', 'Sous Chef', 'Chef de Partie (CDP)', 'Demi Chef de Partie (DCDP)', 'Assistant Cook', 'Kitchen Helper', 'Commis 1', 'Commis 2', 'Commis 3'],
+  'F&B': ['Restaurant Manager', 'Waiter', 'Waitress', 'Captain', 'Bartender', 'Sommelier', 'Food and Beverage Manager'],
+  Housekeeping: ['Housekeeper', 'Housekeeping Supervisor/Manager', 'Laundry Attendant', 'Room Attendant', 'Public Area Cleaner', 'Table boy'],
+  Management: ['General Manager', 'Assistant General Manager', 'Hotel Manager', 'Operations Manager']
+};
+
+const kitchenCuisineOptions = ['Italian', 'Chinese', 'Japanese', 'Indian', 'Mexican', 'Mediterranean', 'Thai', 'Middle Eastern', 'CONTINENTAL', 'TANDOOR', 'Bakery', 'SOUTH INDIAN'];
 
 const PostJob = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const restaurantDetails = useSelector((state) => state.restaurant.details);
-  const restaurantName = useSelector((state) => state.restaurant.Name);
-  console.log(restaurantName)
-
+  const { details: restaurantDetails, Name: restaurantName } = useSelector((state) => state.restaurant);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     restaurantName: '',
     jobDesignation: '',
@@ -26,121 +34,143 @@ const PostJob = () => {
     country: '',
     numberOfRequirements: '',
   });
-
   const [isAbroad, setIsAbroad] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [totalRecruitmentCost, setTotalRecruitmentCost] = useState(0);
-  const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentStatus, setPaymentStatus] = useState('pending');
 
   useEffect(() => {
     if (!restaurantDetails) {
       dispatch(fetchRestaurantDetails());
+    } else {
+      setFormData(prev => ({ ...prev, restaurantName: restaurantDetails.restaurantName }));
     }
   }, [dispatch, restaurantDetails]);
 
   useEffect(() => {
-    if (restaurantDetails) {
-      setFormData(prev => ({ ...prev, restaurantName: restaurantDetails.restaurantName}));
+    const searchParams = new URLSearchParams(location.search);
+    const transactionId = searchParams.get('id');
+    if (transactionId) {
+      checkPaymentStatus(transactionId);
     }
-  }, [restaurantDetails]);
-
-  useEffect(() => {
-    if (!restaurantName) {
-      dispatch(fetchRestaurantDetails());
-    } else {
-      setFormData(prev => ({ ...prev, restaurantName }));
+  }, [location]);
+  const checkPaymentStatus = async (transactionId) => {
+    try {
+      const response = await axios.get(`http://localhost:3000/api-v1/payment/status?id=${transactionId}`);
+      if (response.data.success) {
+        setPaymentStatus('success');
+        setDialogOpen(true);
+        setTimeout(() => {
+          setDialogOpen(false);
+          handleJobPosting();
+        }, 2000);
+      } else {
+        setPaymentStatus('failed');
+        setError('Payment failed. Please try again.');
+        setDialogOpen(true);
+        setTimeout(() => {
+          setDialogOpen(false);
+        }, 2000);
+      }
+    } catch (error) {
+      console.error("Error checking payment status:", error);
+      setPaymentStatus('failed');
+      setError('Error checking payment status. Please try again.');
+      setDialogOpen(true);
+      setTimeout(() => {
+        setDialogOpen(false);
+      }, 2000);
     }
-  }, [dispatch, restaurantName]);
+  };
+  const validateForm = useCallback(() => {
+    const requiredFields = ['restaurantName', 'jobDesignation', 'salary', 'location', 'jobType', 'jobDepartment', 'numberOfRequirements'];
+    if (isAbroad) {
+      requiredFields.push('accommodation', 'country');
+    }
+    if (formData.jobDepartment === 'Kitchen') {
+      requiredFields.push('cuisine');
+    }
 
-  useEffect(() => {
-    const annualSalary = parseFloat(formData.salary) * 12;
-    const recruitmentCost = annualSalary * 0.05;
-    setTotalRecruitmentCost(recruitmentCost);
-    setPaymentAmount(recruitmentCost * 0.25);
-  }, [formData.salary]);
+    const emptyFields = requiredFields.filter(field => !formData[field]);
+    if (emptyFields.length > 0) {
+      setError(`Fill all Fields: ${emptyFields.join(', ')}`);
+      return false;
+    }
+    return true;
+  }, [formData, isAbroad]);
 
-  const handleChange = (e) => {
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const handleSelectChange = (name, value) => {
+  const handleSelectChange = useCallback((name, value) => {
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const handlePayment = async () => {
-    const data = {
+  const handlePayment = useCallback(async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    if (!restaurantDetails) {
+      setError('Restaurant details not available');
+      return;
+    }
+
+    const paymentData = {
       name: formData.restaurantName,
-      amount: Math.round(paymentAmount),
-      number: '9999999999',
+      amount: FIXED_PRICE,
+      number: restaurantDetails.mobileNumber,
       MUID: 'MUID' + Date.now(),
       transactionId: 'T' + Date.now(),
     };
 
     try {
       setIsLoading(true);
-      const res = await axios.post('http://localhost:3000/api-v1/payment/initiate', data);
+      // const res = await axios.post('http://localhost:3000/api-v1/payment/initiate', paymentData);
+      const res = await axios.post('http://43.204.238.196:3000/api-v1/payment/initiate', paymentData);
+
+
       if (res.data?.data?.instrumentResponse?.redirectInfo?.url) {
         window.location.href = res.data.data.instrumentResponse.redirectInfo.url;
-        // Simulate a successful payment after 5 seconds
-        setTimeout(() => {
-          setPaymentStatus('success');
-          setIsLoading(false);
-        }, 5000);
+      } else {
+        throw new Error('Payment Failed');
       }
     } catch (error) {
       setIsLoading(false);
-      setError('Payment failed. Please try again.');
+      setError('Try Again');
       console.error(error);
+    }
+  }, [formData, restaurantDetails, validateForm]);
+
+  const handleJobPosting = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      await dispatch(isAbroad ? createAbroadJob(formData) : createJob(formData)).unwrap();
+      setIsLoading(false);
+      navigate('/restaurant/posted-jobs');
+    } catch (err) {
+      setIsLoading(false);
+      setError(err.message || 'Fail to post job');
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
-    console.log(formData)
+    setError('');
 
     if (paymentStatus !== 'success') {
       await handlePayment();
     } else {
-      setIsLoading(true);
-      setError('');
-
-      try {
-        await dispatch(isAbroad ? createAbroadJob(formData) : createJob(formData)).unwrap();
-        setIsLoading(false);
-        navigate('/restaurant/posted-jobs');
-      } catch (err) {
-        setIsLoading(false);
-        setError(err.message || 'An error occurred while posting the job');
-      }
+      await handleJobPosting();
     }
-  };
-
-  const jobDepartmentOptions = {
-    Kitchen: [
-      'Executive Chef', 'Sous Chef', 'Chef de Partie (CDP)', 'Demi Chef de Partie (DCDP)',
-      'Assistant Cook', 'Kitchen Helper', 'Commis 1', 'Commis 2', 'Commis 3'
-    ],
-    'F&B': [
-      'Restaurant Manager', 'Waiter', 'Waitress', 'Captain', 'Bartender', 'Sommelier',
-      'Food and Beverage Manager'
-    ],
-    Housekeeping: [
-      'Housekeeper', 'Housekeeping Supervisor/Manager', 'Laundry Attendant',
-      'Room Attendant', 'Public Area Cleaner', 'Table boy'
-    ],
-    Management: [
-      'General Manager', 'Assistant General Manager', 'Hotel Manager', 'Operations Manager'
-    ]
-  };
-
-  const kitchenCuisineOptions = [
-    'Italian', 'Chinese', 'Japanese', 'Indian', 'Mexican', 'Mediterranean',
-    'Thai', 'Middle Eastern', 'CONTINENTAL', 'TANDOOR', 'Bakery', 'SOUTH INDIAN'
-  ];
-
+  }, [paymentStatus, handlePayment, handleJobPosting]);
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -275,8 +305,6 @@ const PostJob = () => {
                 label="Job Type"
                 name="jobType"
                 value={formData.jobType}
-
-
                 onChange={(value) => handleSelectChange("jobType", value)}
                 required
               >
@@ -285,31 +313,42 @@ const PostJob = () => {
               </Select>
             </div>
             <div className="mt-6">
-              <Typography variant="h6">Total Recruitment Cost: ₹{totalRecruitmentCost.toFixed(2)}</Typography>
-              <Typography variant="h6">Payment Amount (25% of Recruitment Cost): ₹{paymentAmount.toFixed(2)}</Typography>
+              <Typography variant="h6">Fixed Recruitment Cost: ₹{FIXED_PRICE}</Typography>
             </div>
           </form>
         </CardBody>
         <CardFooter className="flex justify-center pt-2">
-        <Button
-          size="lg"
-          color="blue"
-          ripple="light"
-          onClick={handleSubmit}
-          disabled={isLoading}
-          className="flex items-center gap-2"
-        >
-          {isLoading ? "Processing..." : 
-           paymentStatus === 'success' ? "Post Job" :
-           `Pay ₹${paymentAmount.toFixed(2)} & Post Job`}
-        </Button>
-      </CardFooter>
+          <Button
+            size="lg"
+            color="blue"
+            ripple="light"
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="flex items-center gap-2"
+          >
+            {isLoading ? "Processing..." : 
+             paymentStatus === 'success' ? "Post Job" :
+             `Pay ₹${FIXED_PRICE} & Post Job`}
+          </Button>
+        </CardFooter>
       </Card>
       {error && (
         <Typography color="red" className="mt-4 text-center">
           {error}
         </Typography>
       )}
+      <Dialog open={dialogOpen} handler={() => setDialogOpen(false)}>
+  <div className="p-6">
+    <Typography variant="h5" color={paymentStatus === 'success' ? 'green' : 'red'} className="mb-2">
+      {paymentStatus === 'success' ? 'Payment Successful' : 'Payment Failed'}
+    </Typography>
+    <Typography>
+      {paymentStatus === 'success' 
+        ? 'Your payment was successful. Posting your job now...' 
+        : 'Your payment failed. Please try again.'}
+    </Typography>
+  </div>
+</Dialog>
     </motion.div>
   );
 };

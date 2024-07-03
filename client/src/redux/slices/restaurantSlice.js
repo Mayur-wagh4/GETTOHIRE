@@ -1,7 +1,9 @@
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import axios from 'axios';
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import axios from "axios";
+import { setAuth } from "./authSlice";
 
-const BASE_URL = 'http://localhost:3000/api-v1';
+const BASE_URL = 'http://43.204.238.196:3000/api-v1';
+// const BASE_URL = "http://localhost:3000/api-v1";
 
 // Utility function to get the auth token from the state
 const getAuthToken = (getState) => {
@@ -9,69 +11,98 @@ const getAuthToken = (getState) => {
   return state.restaurant.token;
 };
 
-
 export const registerRestaurant = createAsyncThunk(
-  'restaurant/register',
-  async (restaurantData, { rejectWithValue }) => {
+  "restaurant/register",
+  async (restaurantData, { dispatch, rejectWithValue }) => {
     try {
-      const response = await axios.post(`${BASE_URL}/auth/register/restaurant`, restaurantData);
-      console.log('Restaurant Data:', restaurantData); // Log restaurantData here
+      const response = await axios.post(
+        `${BASE_URL}/auth/register/restaurant`,
+        restaurantData
+      );
+      dispatch(
+        setAuth({
+          userType: "restaurant",
+          token: response.data.token,
+          userId: response.data.restaurant._id,
+        })
+      );
       return response.data;
     } catch (error) {
-      // Handle Axios errors and return structured data from the server response or a fallback message
-      return rejectWithValue(error.response?.data || 'Failed to register restaurant');
+      return rejectWithValue(
+        error.response?.data || "Failed to register restaurant"
+      );
     }
   }
 );
-
 export const loginRestaurant = createAsyncThunk(
-  'restaurant/login',
-  async (credentials, { rejectWithValue }) => {
+  "restaurant/login",
+  async (credentials, { dispatch, rejectWithValue }) => {
     try {
-      const response = await axios.post(`${BASE_URL}/auth/signin/restaurant`, credentials);
+      const response = await axios.post(
+        `${BASE_URL}/auth/signin/restaurant`,
+        credentials
+      );
+      dispatch(
+        setAuth({
+          userType: "restaurant",
+          token: response.data.token,
+          userId: response.data.restaurant._id,
+        })
+      );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data || 'Failed to login');
+      return rejectWithValue(error.response?.data || "Failed to login");
     }
   }
 );
 
 export const fetchRestaurantDetails = createAsyncThunk(
-  'restaurant/fetchDetails',
+  "restaurant/fetchDetails",
   async (_, { getState, rejectWithValue }) => {
     const token = getAuthToken(getState);
     try {
-      const response = await axios.get(`${BASE_URL}/restaurants/get-restaurant-profile`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axios.get(
+        `${BASE_URL}/restaurants/get-restaurant-profile`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data || 'Failed to fetch restaurant details');
+      return rejectWithValue(
+        error.response?.data || "Failed to fetch restaurant details"
+      );
     }
   }
 );
 
 export const updateRestaurantProfile = createAsyncThunk(
-  'restaurant/updateProfile',
+  "restaurant/updateProfile",
   async (profileData, { getState, rejectWithValue }) => {
     const token = getAuthToken(getState);
     try {
-      const response = await axios.put(`${BASE_URL}/restaurants/update-restaurant-profile`, profileData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axios.put(
+        `${BASE_URL}/restaurants/update-restaurant-profile`,
+        profileData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data || 'Failed to update restaurant profile');
+      return rejectWithValue(
+        error.response?.data || "Failed to update restaurant profile"
+      );
     }
   }
 );
 
 export const fetchRestaurantJobListings = createAsyncThunk(
-  'restaurant/fetchJobListings',
+  "restaurant/fetchJobListings",
   async ({ restaurantId }, { getState, rejectWithValue }) => {
     const state = getState().restaurant;
     if (state.jobPostsFetched) {
@@ -82,65 +113,80 @@ export const fetchRestaurantJobListings = createAsyncThunk(
     const token = getAuthToken(getState);
 
     try {
-      const response = await axios.get(`${BASE_URL}/restaurants/get-restaurant-jobs`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        params: { restaurantId },
-      });
+      const response = await axios.get(
+        `${BASE_URL}/restaurants/get-restaurant-jobs`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          params: { restaurantId },
+        }
+      );
 
       if (Array.isArray(response.data)) {
         return response.data;
       } else if (response.data && Array.isArray(response.data.jobPosts)) {
         return response.data.jobPosts;
       } else {
-        console.error('Unexpected response structure:', response.data);
+        console.error("Unexpected response structure:", response.data);
         return [];
       }
     } catch (error) {
-      console.error('Error fetching job listings:', error);
-      return rejectWithValue(error.response?.data || 'Failed to fetch job listings');
+      console.error("Error fetching job listings:", error);
+      return rejectWithValue(
+        error.response?.data || "Failed to fetch job listings"
+      );
     }
   }
 );
 
 export const createJob = createAsyncThunk(
-  'restaurant/createJob',
+  "restaurant/createJob",
   async (jobData, { getState, rejectWithValue }) => {
     const token = getAuthToken(getState);
     try {
-      const response = await axios.post(`${BASE_URL}/restaurants/upload-job`, jobData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axios.post(
+        `${BASE_URL}/restaurants/upload-job`,
+        jobData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data || 'Failed to create job');
+      return rejectWithValue(error.response?.data || "Failed to create job");
     }
   }
 );
 
 export const createAbroadJob = createAsyncThunk(
-  'restaurant/createAbroadJob',
+  "restaurant/createAbroadJob",
   async (jobData, { getState, rejectWithValue }) => {
     const token = getAuthToken(getState);
     try {
-      const response = await axios.post(`${BASE_URL}/restaurants/upload-abroad-job`, jobData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axios.post(
+        `${BASE_URL}/restaurants/upload-abroad-job`,
+        jobData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data || 'Failed to create abroad job');
+      return rejectWithValue(
+        error.response?.data || "Failed to create abroad job"
+      );
     }
   }
 );
 
 // Restaurant Slice
 const restaurantSlice = createSlice({
-  name: 'restaurant',
+  name: "restaurant",
   initialState: {
     token: null,
     restaurantId: null,
@@ -176,7 +222,7 @@ const restaurantSlice = createSlice({
       })
       .addCase(registerRestaurant.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to register restaurant';
+        state.error = action.payload || "Failed to register restaurant";
       })
       .addCase(loginRestaurant.pending, (state) => {
         state.loading = true;
@@ -190,7 +236,7 @@ const restaurantSlice = createSlice({
       })
       .addCase(loginRestaurant.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to login';
+        state.error = action.payload || "Failed to login";
       })
       .addCase(fetchRestaurantDetails.pending, (state) => {
         state.loading = true;
@@ -203,7 +249,7 @@ const restaurantSlice = createSlice({
       })
       .addCase(fetchRestaurantDetails.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to fetch restaurant details';
+        state.error = action.payload || "Failed to fetch restaurant details";
       })
       .addCase(updateRestaurantProfile.pending, (state) => {
         state.loading = true;
@@ -215,7 +261,7 @@ const restaurantSlice = createSlice({
       })
       .addCase(updateRestaurantProfile.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to update restaurant profile';
+        state.error = action.payload || "Failed to update restaurant profile";
       })
       .addCase(fetchRestaurantJobListings.pending, (state) => {
         if (!state.jobPostsFetched) {
@@ -234,7 +280,7 @@ const restaurantSlice = createSlice({
       .addCase(fetchRestaurantJobListings.rejected, (state, action) => {
         if (!state.jobPostsFetched) {
           state.loading = false;
-          state.error = action.payload || 'Failed to fetch job listings';
+          state.error = action.payload || "Failed to fetch job listings";
           state.jobPosts = [];
           state.jobPostsFetched = false;
         }
@@ -249,7 +295,7 @@ const restaurantSlice = createSlice({
       })
       .addCase(createJob.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to create job';
+        state.error = action.payload || "Failed to create job";
       })
       .addCase(createAbroadJob.pending, (state) => {
         state.loading = true;
@@ -261,7 +307,7 @@ const restaurantSlice = createSlice({
       })
       .addCase(createAbroadJob.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to create abroad job';
+        state.error = action.payload || "Failed to create abroad job";
       });
   },
 });

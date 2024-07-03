@@ -1,41 +1,48 @@
-import { Button, Input, Typography } from "@material-tailwind/react";
+import { Button, Input, Spinner, Typography } from "@material-tailwind/react";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useDispatch } from 'react-redux';
 import { Link, useNavigate } from "react-router-dom";
 import { signin } from "../../../assets/assets";
+import { setAuth } from '../../../redux/slices/authSlice';
 import { loginCandidate } from '../../../redux/slices/candidateSlice';
 import Footer from '../../common/footer';
 import ComplexNavbar from '../../common/navbar';
 
 export function SignIn() {
   const [formData, setFormData] = useState({ email: '', password: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error, token, userId } = useSelector((state) => state.candidate);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSignIn = (e) => {
+  const handleSignIn = async (e) => {
     e.preventDefault();
-    dispatch(loginCandidate(formData));
-  };
-  useEffect(() => {
-    console.log("SignIn component mounted");
-  }, []);
-  useEffect(() => {
-    if (token && userId) {
-      navigate('/candidate');
-    }
-  }, [token, userId, navigate]);
+    setLoading(true);
+    setError(null);
 
-  useEffect(() => {
-    if (error) {
-      console.log("Error: ", error);
+    try {
+      const resultAction = await dispatch(loginCandidate(formData));
+      if (loginCandidate.fulfilled.match(resultAction)) {
+        dispatch(setAuth({
+          userType: 'candidate',
+          token: resultAction.payload.token,
+          userId: resultAction.payload.user._id
+        }));
+        navigate('/candidate');
+      } else {
+        setError("Login failed. Please check your credentials and try again.");
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
-  }, [error]);
+  };
 
   return (
     <>
@@ -82,13 +89,13 @@ export function SignIn() {
               />
             </div>
             <Button className="mt-6 transition-all hover:bg-blue-600 hover:shadow-lg" fullWidth type="submit" disabled={loading}>
-              {loading ? 'Signing In...' : 'Sign In'}
+              {loading ? <Spinner className="h-4 w-4 mx-auto" /> : 'Sign In'}
             </Button>
-            <Typography variant="paragraph" className="text-center text-blue-gray-500 font-medium mt-4">
-              Not registered? <Link to="/candidate-register" className="text-blue-500 ml-1">Create account</Link>
+            <Typography variant="paragraph" className="text-center text-blue-gray-500 font-normal mt-4">
+              Not registered? <Link to="/candidate-register" className="text-blue-500 ml-1 font-medium">Create account</Link>
             </Typography>
             {error && (
-              <Typography variant="paragraph" className="text-red-500 mt-4">
+              <Typography variant="paragraph" className="text-red-500 mt-4 text-center">
                 {error}
               </Typography>
             )}

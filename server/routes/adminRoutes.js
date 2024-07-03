@@ -10,7 +10,7 @@ import {
   getAllJobs,
   getAllRestaurants,
   getAllUsers
-} from "../controllers/AdminController.js";
+} from "../controllers/adminController.js";
 
 const router = express.Router();
 

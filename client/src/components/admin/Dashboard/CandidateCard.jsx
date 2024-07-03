@@ -28,7 +28,7 @@ const CandidateCard = ({ candidate, onDelete, onView, deleteInProgress }) => {
           <Typography variant="h4" className="mb-4 font-bold text-blue-gray-800">
             {candidate.name}
           </Typography>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-left">
+          <div className="grid grid-cols-1  sm:grid-cols-2 md:grid-cols-3 gap-4 text-left">
             <div className="mb-2">
               <Typography className="font-semibold text-blue-gray-600">
                 Department:
@@ -44,10 +44,9 @@ const CandidateCard = ({ candidate, onDelete, onView, deleteInProgress }) => {
               <Typography className="text-blue-gray-800">
                 {candidate.position}
               </Typography>
+            
             </div>
-            {showDetails && (
-              <>
-                <div className="mb-2">
+            <div className="mb-2">
                   <Typography className="font-semibold text-blue-gray-600">
                     Email:
                   </Typography>
@@ -55,6 +54,9 @@ const CandidateCard = ({ candidate, onDelete, onView, deleteInProgress }) => {
                     {candidate.email}
                   </Typography>
                 </div>
+            {showDetails && (
+              <>
+              
                 <div className="mb-2">
                   <Typography className="font-semibold text-blue-gray-600">
                     Contact:
@@ -91,37 +93,38 @@ const CandidateCard = ({ candidate, onDelete, onView, deleteInProgress }) => {
             )}
           </div>
         </CardBody>
-        <CardFooter className="flex flex-col sm:flex-row justify-between items-center pt-0 gap-4">
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Button
-              color="blue"
-              variant="gradient"
-              onClick={toggleDetails}
+        <CardFooter className="flex justify-left items-center pt-0 gap-">
+        <div className="flex flex-row gap-4">
+        <motion.div
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+         >
+      <Button
+        color="blue"
+        variant="gradient"
+        onClick={toggleDetails}
+        className="flex items-center justify-center gap-2 px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-all duration-300"
+      >
+        <EyeIcon className="h-5 w-5" />
 
-              className="flex items-center justify-center gap-2 px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-all duration-300 w-full sm:w-auto"
-            >
-          <EyeIcon className="h-5 w-5" /> {showDetails ? "Hide Details" : "View "}
-
-            </Button>
-          </motion.div>
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Button
-              color="red"
-              variant="gradient"
-              onClick={() => onDelete(candidate._id)}
-              disabled={deleteInProgress}
-              className="flex items-center justify-center gap-2 px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-all duration-300 w-full sm:w-auto"
-            >
-              <TrashIcon className="h-5 w-5" /> {deleteInProgress ? 'Deleting...' : 'Delete'}
-            </Button>
-          </motion.div>
-        </CardFooter>
+      </Button>
+    </motion.div>
+    <motion.div
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <Button
+        color="red"
+        variant="gradient"
+        onClick={() => onDelete(candidate._id)}
+        disabled={deleteInProgress}
+        className="flex items-center justify-center gap-2 px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-all duration-300"
+      >
+        <TrashIcon className="h-5 w-5" />
+      </Button>
+    </motion.div>
+  </div>
+</CardFooter>
       </Card>
     </motion.div>
   );

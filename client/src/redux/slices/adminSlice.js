@@ -1,20 +1,30 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import axios from 'axios';
+import { setAuth } from './authSlice';
 
-const BASE_URL = 'http://localhost:3000/api-v1';
+const BASE_URL = 'http://43.204.238.196:3000/api-v1';
+// const BASE_URL = 'http://localhost:3000/api-v1';
 
-// Async Thunks
+
 export const signInAdmin = createAsyncThunk(
   'admin/signIn',
-  async ({ username, password }, { rejectWithValue }) => {
+  async ({ username, password }, { dispatch, rejectWithValue }) => {
     try {
       const response = await axios.post(`${BASE_URL}/auth/signin/admin`, { username, password });
+      dispatch(
+        setAuth({
+          userType: 'admin',
+          token: response.data.token,
+          userId: response.data.admin._id,
+        })
+      );
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Sign in failed');
     }
   }
 );
+
 
 export const fetchCandidates = createAsyncThunk(
   'admin/fetchCandidates',

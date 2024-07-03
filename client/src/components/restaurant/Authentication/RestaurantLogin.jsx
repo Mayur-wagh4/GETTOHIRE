@@ -1,7 +1,7 @@
-import { Button, Input, Typography } from "@material-tailwind/react";
+import { Button, Input, Spinner, Typography } from "@material-tailwind/react";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from 'react-redux';
+import { useState } from "react";
+import { useDispatch } from 'react-redux';
 import { Link, useNavigate } from "react-router-dom";
 import { signin2 } from '../../../assets/assets';
 import { loginRestaurant } from '../../../redux/slices/restaurantSlice';
@@ -9,30 +9,34 @@ import Footer from '../../common/footer';
 import ComplexNavbar from '../../common/navbar';
 
 export function SignIn() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const dispatch = useDispatch();
-  const navigateTo = useNavigate();
+  const navigate = useNavigate();
 
-  const { loading, error, token } = useSelector((state) => state?.restaurant || {});
-
-  const handleSignIn = (e) => {
-    e.preventDefault();
-    dispatch(loginRestaurant({ email, password }));
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  useEffect(() => {
-    if (token) {
-      console.log('Token received:', token);
-      navigateTo("/restaurant");
-    }
-  }, [token, navigateTo]);
+  const handleSignIn = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-  useEffect(() => {
-    if (error) {
-      console.log('Error during sign in:', error);
+    try {
+      const resultAction = await dispatch(loginRestaurant(formData));
+      if (loginRestaurant.fulfilled.match(resultAction)) {
+        navigate('/restaurant');
+      } else {
+        setError("Login failed. Please check your credentials and try again.");
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
-  }, [error]);
+  };
 
   return (
     <>
@@ -52,34 +56,36 @@ export function SignIn() {
             <div className="mb-6 flex flex-col gap-6">
               <Typography variant="small" color="gray" className="-mb-3 font-medium">Your email</Typography>
               <Input
+                name="email"
                 size="lg"
                 placeholder="name@mail.com"
                 className="!border-t-blue-gray-200 focus:!border-t-gray-900 transition-all hover:shadow-lg hover:bg-gray-100"
                 labelProps={{ className: "before:content-none after:content-none" }}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={formData.email}
+                onChange={handleChange}
                 disabled={loading}
               />
               <Typography variant="small" color="gray" className="-mb-3 font-medium">Password</Typography>
               <Input
+                name="password"
                 type="password"
                 size="lg"
                 placeholder="********"
                 className="!border-t-blue-gray-200 focus:!border-t-gray-900 transition-all hover:shadow-lg hover:bg-gray-100"
                 labelProps={{ className: "before:content-none after:content-none" }}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={formData.password}
+                onChange={handleChange}
                 disabled={loading}
               />
             </div>
             <Button className="mt-6 transition-all hover:bg-blue-600 hover:shadow-lg" fullWidth type="submit" disabled={loading}>
-              {loading ? 'Signing In...' : 'Sign In'}
+              {loading ? <Spinner className="h-4 w-4 mx-auto" /> : 'Sign In'}
             </Button>
             <Typography variant="paragraph" className="text-center text-blue-gray-500 font-medium mt-4">
               Not registered? <Link to="/restaurant-register" className="text-blue-500 ml-1">Create account</Link>
             </Typography>
             {error && (
-              <Typography variant="paragraph" className="text-red-500 mt-4">
+              <Typography variant="paragraph" className="text-red-500 mt-4 text-center">
                 {error}
               </Typography>
             )}

@@ -1,76 +1,71 @@
-import { Spinner } from '@material-tailwind/react';
-import React, { lazy, Suspense } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import React from "react";
+import { Route, Routes } from "react-router-dom";
+import PaymentFailure from "../components/common/PaymentFailure";
+import PaymentStatus from "../components/common/PaymentStatus";
+import PaymentSuccess from "../components/common/PaymentSuccess";
+import Home from "../components/home/home";
+import Privacy from "../components/home/privacy";
+import Refund from "../components/home/refund";
+import Terms from "../components/home/terms";
 
-// Lazy load components
-const Home = lazy(() => import('../components/home/home'));
-const Privacy = lazy(() => import('../components/home/privacy'));
-const Refund = lazy(() => import('../components/home/refund'));
-const Terms = lazy(() => import('../components/home/terms'));
+import CandidateLogin from "../components/candidate/Authentication/CandidateLogin";
+import CandidateRegister from "../components/candidate/Authentication/CandidateRegister";
+import AppliedJobs from "../components/candidate/Dashboard/AppliedJobs";
+import CandidateProfile from "../components/candidate/Dashboard/CandidateProfile";
+import EditDetails from "../components/candidate/Dashboard/EditDetails";
+import Notification from "../components/candidate/Dashboard/Notifications";
+import Payments from "../components/candidate/Payments";
+import CandidateLayout from "../components/candidate/layouts/CandidateLayout";
 
-const CandidateLogin = lazy(() => import('../components/candidate/Authentication/CandidateLogin'));
-const CandidateRegister = lazy(() => import('../components/candidate/Authentication/CandidateRegister'));
-const TermsAndConditions = lazy(() => import('../components/candidate/Authentication/TermsAndConditions'));
-const CandidateLayout = lazy(() => import('../components/candidate/layouts/CandidateLayout'));
-const AppliedJobs = lazy(() => import('../components/candidate/Dashboard/AppliedJobs'));
-const CandidateProfile = lazy(() => import('../components/candidate/Dashboard/CandidateProfile'));
-const EditDetails = lazy(() => import('../components/candidate/Dashboard/EditDetails'));
-const Notification = lazy(() => import('../components/candidate/Dashboard/Notifications'));
-const Payments = lazy(() => import('../components/candidate/Payments'));
+import RestaurantLogin from "../components/restaurant/Authentication/RestaurantLogin";
+import RestaurantRegister from "../components/restaurant/Authentication/RestaurantRegister";
+import CompletedRequirements from "../components/restaurant/Dashboard/CompletedRequirements";
+import EditProfile from "../components/restaurant/Dashboard/EditProfile";
+import Notifications from "../components/restaurant/Dashboard/Notifications";
+import RestaurantProfile from "../components/restaurant/Dashboard/RestaurantProfile";
+import PostJobs from "../components/restaurant/Dashboard/postJob";
+import RestaurantLayout from "../components/restaurant/layouts/RestaurantLayout";
 
-const RestaurantLogin = lazy(() => import('../components/restaurant/Authentication/RestaurantLogin'));
-const RestaurantRegister = lazy(() => import('../components/restaurant/Authentication/RestaurantRegister'));
-const RestaurantLayout = lazy(() => import('../components/restaurant/layouts/RestaurantLayout'));
-const RestaurantProfile = lazy(() => import('../components/restaurant/Dashboard/RestaurantProfile'));
-const CompletedRequirements = lazy(() => import('../components/restaurant/Dashboard/CompletedRequirements'));
-const EditProfile = lazy(() => import('../components/restaurant/Dashboard/EditProfile'));
-const Notifications = lazy(() => import('../components/restaurant/Dashboard/Notifications'));
-const PostJobs = lazy(() => import('../components/restaurant/Dashboard/postJob'));
+import AddRestaurant from "../components/admin/Dashboard/AddRestaurant";
+import AdminDashboard from "../components/admin/Dashboard/AdminDashboard";
+import CandidateList from "../components/admin/Dashboard/CandidateList";
+import EditCandidate from "../components/admin/Dashboard/EditCandidate";
+import JobApplications from "../components/admin/Dashboard/JobApplications";
+import JobList from "../components/admin/Dashboard/JobList";
+import AdminNotifications from "../components/admin/Dashboard/Notifications";
+import PostJob from "../components/admin/Dashboard/PostJob";
+import RestaurantList from "../components/admin/Dashboard/RestaurantList";
+import AdminLogin from "../components/admin/auth/AdminLogin";
+import AdminLayout from "../components/admin/layouts/AdminLayout";
 
+import ProtectedRoute from "../components/common/ProtectedRoute";
 
-
-const AdminLogin = lazy(() => import('../components/admin/auth/AdminLogin'));
-const AdminLayout = lazy(() => import('../components/admin/layouts/AdminLayout'));
-const AdminDashboard = lazy(() => import('../components/admin/Dashboard/AdminDashboard'));
-const CandidateList = lazy(() => import('../components/admin/Dashboard/CandidateList'));
-const EditCandidate = lazy(() => import('../components/admin/Dashboard/EditCandidate'));
-const RestaurantList = lazy(() => import('../components/admin/Dashboard/RestaurantList'));
-const AddRestaurant = lazy(() => import('../components/admin/Dashboard/AddRestaurant'));
-const PostJob = lazy(() => import('../components/admin/Dashboard/PostJob'));
-const JobList = lazy(() => import('../components/admin/Dashboard/JobList'));
-const JobApplications = lazy(() => import('../components/admin/Dashboard/JobApplications'));
-const AdminNotifications = lazy(() => import('../components/admin/Dashboard/Notifications'));
-
-
-const Jobs = lazy(() => import('../components/Jobs/Jobs'));
-const ApplyJob = lazy(() => import('../components/Jobs/ApplyJob'));
-const JobDetails = lazy(() => import('../components/Jobs/JobDetails'));
-
-
+import Jobs from "../components/Jobs/Jobs";
 
 const AppRoutes = () => {
   return (
     <div className="App">
-      <Suspense fallback={<Spinner />}>
-        <Routes>
-          {/* Home Routes */}
-          <Route path="/" element={<Home />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/refund" element={<Refund />} />
-          <Route path='/payment'element={<Payments/>}/>
+      <Routes>
+      <Route path="*" element={<div>Catch-all: {window.location.pathname}</div>} />
+        {/* Public Routes */}
+        <Route path="/" element={<Home />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/refund" element={<Refund />} />
+        <Route path="/jobs" element={<Jobs />} />
+        <Route path="/payment-status/id=:transactionId" element={<PaymentStatus />} />
+        <Route path="/payment/success" element={<PaymentSuccess/>} />
+        <Route path="/payment/failure" element={<PaymentFailure/>} />
 
-          <Route path="/jobs">
-          <Route index element={<Jobs />} />
-          <Route path=":id" element={<JobDetails />} />
-          <Route path=":id/apply" element={<ApplyJob />} />
-          </Route>    
+        {/* Authentication Routes */}
+        <Route path="/candidate-login" element={<CandidateLogin />} />
+        <Route path="/candidate-register" element={<CandidateRegister />} />
+        <Route path="/restaurant-login" element={<RestaurantLogin />} />
+        <Route path="/restaurant-register" element={<RestaurantRegister />} />
+        <Route path="/admin-login" element={<AdminLogin />} />
 
-
-          {/* Candidate Routes */}
-          <Route path="/candidate-login" element={<CandidateLogin />} />
-          <Route path="/candidate-register" element={<CandidateRegister />} />
-          <Route path="/terms-conditions" element={<TermsAndConditions />} />
+        {/* Protected Candidate Routes */}
+        <Route element={<ProtectedRoute allowedUserTypes={["candidate"]} />}>
           <Route path="/candidate" element={<CandidateLayout />}>
             <Route index element={<CandidateProfile />} />
             <Route path="applied-jobs" element={<AppliedJobs />} />
@@ -78,10 +73,10 @@ const AppRoutes = () => {
             <Route path="notifications" element={<Notification />} />
             <Route path="payment" element={<Payments />} />
           </Route>
+        </Route>
 
-          {/* Restaurant Routes */}
-          <Route path="/restaurant-login" element={<RestaurantLogin />} />
-          <Route path="/restaurant-register" element={<RestaurantRegister />} />
+        {/* Protected Restaurant Routes */}
+        <Route element={<ProtectedRoute allowedUserTypes={["restaurant"]} />}>
           <Route path="/restaurant" element={<RestaurantLayout />}>
             <Route index element={<RestaurantProfile />} />
             <Route path="posted-jobs" element={<CompletedRequirements />} />
@@ -89,11 +84,10 @@ const AppRoutes = () => {
             <Route path="notifications" element={<Notifications />} />
             <Route path="postjob" element={<PostJobs />} />
           </Route>
+        </Route>
 
-         
-
-          {/* Admin Routes */}
-          <Route path="/admin/admin-login" element={<AdminLogin />} />
+        {/* Protected Admin Routes */}
+        <Route element={<ProtectedRoute allowedUserTypes={["admin"]} />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="candidates" element={<CandidateList />} />
@@ -105,8 +99,8 @@ const AppRoutes = () => {
             <Route path="view-applications" element={<JobApplications />} />
             <Route path="notifications" element={<AdminNotifications />} />
           </Route>
-        </Routes>
-      </Suspense>
+        </Route>
+      </Routes>
     </div>
   );
 };

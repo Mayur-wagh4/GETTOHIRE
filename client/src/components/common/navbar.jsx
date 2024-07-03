@@ -18,12 +18,11 @@ import {
   Navbar,
   Typography,
 } from '@material-tailwind/react';
-import Tooltip from '@material-ui/core/Tooltip';
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { LogoNewImage, profile } from '../../assets/assets';
-import { logoutCandidate } from '../../redux/slices/candidateSlice'; // Import your logout action
+import { logoutCandidate } from '../../redux/slices/candidateSlice';
 
 const navListMenuItems = [
   {
@@ -42,20 +41,27 @@ const navListMenuItems = [
     title: 'Admin',
     description: 'Manage functionalities of the platform.',
     icon: Bars4Icon,
-    path: '/admin/admin-login',
+    path: '/admin-login',
   },
+];
+
+const navListItems = [
+  { label: 'About Us', route: '/#About-us' },
+  { label: 'Why Us', route: '/#why-us' },
+  { label: 'Reviews', route: '/#reviews' },
+  { label: 'Contact Us', route: '/#contact-us' },
+  { label: 'Pricing', route: '/#pricing' },
+  { label: 'Jobs', route: '/jobs' },
 ];
 
 function ProfileMenu({ name }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const dispatch = useDispatch();
-  const Navigate = useNavigate();
-
-  const closeMenu = () => setIsMenuOpen(false);
+  const navigate = useNavigate();
 
   const handleLogout = () => {
-    dispatch(logoutCandidate()); // Dispatch the logout action
-    Navigate('/'); // Redirect to home page after logout
+    dispatch(logoutCandidate());
+    navigate('/');
   };
 
   return (
@@ -86,22 +92,20 @@ function ProfileMenu({ name }) {
     </Menu>
   );
 }
-
 function LoginMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const renderItems = navListMenuItems.map(({ icon, title, description, path }, key) => (
-    <Link to={path} key={key} onClick={() => setIsMobileMenuOpen(false)}>
-      <MenuItem className="flex items-center gap-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
-        <div className="flex items-center justify-center rounded-lg bg-orange-400 p-2">
-          {React.createElement(icon, { strokeWidth: 2, className: 'h-6 w-6' })}
+    <Link to={path} key={key} onClick={() => setIsMenuOpen(false)}>
+      <MenuItem className="flex items-center gap-4 py-4 pr-8 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all duration-200">
+        <div className="flex items-center justify-center rounded-full bg-gradient-to-br from-orange-800 to-pink-500 p-3 shadow-md">
+          {React.createElement(icon, { strokeWidth: 2, className: 'h-6 w-6 text-white' })}
         </div>
         <div>
-          <Typography variant="h6" className="flex items-center text-sm font-bold ">
+          <Typography variant="h6" className="text-base font-bold text-gray-800 dark:text-white">
             {title}
           </Typography>
-          <Typography variant="paragraph" className="text-xs font-medium text-orange-400">
+          <Typography variant="small" className="font-medium text-gray-500 dark:text-gray-300">
             {description}
           </Typography>
         </div>
@@ -110,81 +114,31 @@ function LoginMenu() {
   ));
 
   return (
-    <React.Fragment>
-      <Menu open={isMenuOpen} handler={setIsMenuOpen} offset={{ mainAxis: 20 }} placement="bottom" allowHover={true}>
-        <MenuHandler>
-          <Typography as="div" variant="small" className="font-medium">
-            <div
-              className="flex items-center gap-2 py-2 pr-4 font-medium cursor-pointer text-white hover:text-orange-400 transition-colors duration-300"
-              onClick={() => setIsMobileMenuOpen((cur) => !cur)}
-            >
-              LogIn/SignUp
-              <ChevronDownIcon
-                strokeWidth={2.5}
-                className={`hidden h-3 w-3 transition-transform lg:block ${isMenuOpen ? 'rotate-180' : ''}`}
-              />
-              <ChevronDownIcon
-                strokeWidth={2.5}
-                className={`block h-3 w-3 transition-transform lg:hidden ${isMobileMenuOpen ? 'rotate-180' : ''}`}
-              />
-            </div>
-          </Typography>
-        </MenuHandler>
-        <MenuList className="hidden max-w-screen-xl rounded-xl lg:block bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-opacity-90 backdrop-blur-sm border border-orange-500/20 shadow-lg">
-          <ul className="grid grid-cols-3 gap-y-2 outline-none outline-0">{renderItems}</ul>
-        </MenuList>
-      </Menu>
-
-      <div className="block lg:hidden">
-        <Collapse open={isMobileMenuOpen}>
-          <div className="mt-2 rounded-lg shadow-lg bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-opacity-90 backdrop-blur-sm border border-orange-500/20">
-            {renderItems}
-          </div>
-        </Collapse>
-      </div>
-    </React.Fragment>
-  );
-}
-
-const navListItems = [
-  { label: 'About Us', route: '/#About-us' },
-  { label: 'Why Us', route: '/#why-us' },
-  { label: 'Reviews', route: '/#reviews' },
-  { label: 'Contact Us', route: '/#contact-us' },
-  { label: 'Pricing ', route: '/#pricing' },
-];
-
-function NavList({ isLoggedIn }) {
-  return (
-    <ul className="mt-2 mb-4 flex flex-col gap-2 lg:mb-0 lg:mt-0 lg:flex-row lg:items-center">
-      {navListItems.map(({ label, route }) => (
-        <Typography key={label} variant="small" className="font-medium">
-          <MenuItem className="flex items-center gap-2 lg:rounded-full">
-            <a
-              href={route}
-              className="px-4 transition duration-300 ease-in-out transform hover:-translate-y-1 hover:text-orange-400 dark:hover:text-orange-400"
-            >
-              {label}
-            </a>
-          </MenuItem>
+    <Menu 
+      open={isMenuOpen} 
+      handler={setIsMenuOpen} 
+      placement="bottom-end"
+      animate={{
+        mount: { y: 0 },
+        unmount: { y: 25 },
+      }}
+    >
+      <MenuHandler>
+        <Button 
+          variant="gradient" 
+          className="normal-case flex items-center gap-2 px-4 py-2 text-sm font-medium shadow-md hover:shadow-lg transition-all duration-200"
+        >
+          Login / Sign Up
+          <ChevronDownIcon strokeWidth={3} className={`h-4 w-4 transition-transform ${isMenuOpen ? "rotate-180" : ""}`} />
+        </Button>
+      </MenuHandler>
+      <MenuList className="p-3 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700">
+        <Typography variant="h6" color="blue-gray" className="mb-2 font-bold text-gray-900 dark:text-white">
+          Choose Your Role
         </Typography>
-      ))}
-      <Typography variant="small" className="font-medium text-gray-800 dark:text-gray-200">
-        <MenuItem className="flex items-center gap-2 lg:rounded-full">
-          {isLoggedIn ? (
-            <Link to="/jobs" className="px-4 transition duration-300 ease-in-out transform hover:-translate-y-1 hover:text-orange-400 dark:hover:text-orange-400">
-              Jobs
-            </Link>
-          ) : (
-            <Tooltip title="Please login first">
-              <span className="cursor-not-allowed px-4 transition duration-300 ease-in-out transform hover:-translate-y-1 hover:text-orange-400 dark:hover:text-orange-400">
-                Jobs
-              </span>
-            </Tooltip>
-          )}
-        </MenuItem>
-      </Typography>
-    </ul>
+        {renderItems}
+      </MenuList>
+    </Menu>
   );
 }
 
@@ -193,8 +147,6 @@ export default function ComplexNavbar() {
   const isLoggedIn = useSelector((state) => !!state.candidate.token);
   const candidateName = useSelector((state) => state.candidate.details?.name || '');
 
-  const toggleIsNavOpen = () => setIsNavOpen((cur) => !cur);
-
   useEffect(() => {
     const handleResize = () => window.innerWidth >= 960 && setIsNavOpen(false);
     window.addEventListener('resize', handleResize);
@@ -202,26 +154,34 @@ export default function ComplexNavbar() {
   }, []);
 
   return (
-<Navbar className="sticky top-0 z-50 max-w-full w-full bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 shadow-lg backdrop-blur-sm bg-opacity-90 border-b border-orange-500/20 animate-shimmer">
-<div className="container mx-auto flex items-center justify-between">
+    <Navbar className="sticky top-0 z-50 max-w-full w-full bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 shadow-lg backdrop-blur-sm bg-opacity-90 border-b border-orange-500/20 animate-shimmer">
+      <div className="container mx-auto flex items-center justify-between">
         <Link to="/" className="flex items-center">
           <img className="h-10 w-auto object-contain mr-2" src={LogoNewImage} alt="logo" />
           <Typography variant="h6" className="hidden lg:block font-semibold">
             GETTOHIRE
           </Typography>
         </Link>
-        <div className="hidden lg:block flex-grow">
-          <NavList isLoggedIn={isLoggedIn} />
+        <div className="hidden lg:flex flex-grow items-center justify-center">
+          {navListItems.map(({ label, route }) => (
+            <Typography key={label} as="a" href={route} variant="small" className="font-medium px-4 py-2 text-white hover:text-orange-400 transition-colors duration-300">
+              {label}
+            </Typography>
+          ))}
         </div>
         <div className="flex items-center gap-2">
-          <IconButton variant="text" onClick={toggleIsNavOpen} className="lg:hidden">
-            <Bars2Icon className="h-6 w-6" />
+          <IconButton variant="text" onClick={() => setIsNavOpen(!isNavOpen)} className="lg:hidden">
+            <Bars2Icon className="h-6 text-white w-6" />
           </IconButton>
           {isLoggedIn ? <ProfileMenu name={candidateName} /> : <LoginMenu />}
         </div>
       </div>
       <Collapse open={isNavOpen} className="lg:hidden">
-        <NavList isLoggedIn={isLoggedIn} />
+        {navListItems.map(({ label, route }) => (
+          <Typography key={label} as="a" href={route} variant="small" className="font-medium block px-4 py-2 text-white hover:text-orange-400 transition-colors duration-300">
+            {label}
+          </Typography>
+        ))}
       </Collapse>
     </Navbar>
   );

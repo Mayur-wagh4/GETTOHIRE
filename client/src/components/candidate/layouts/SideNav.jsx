@@ -1,12 +1,13 @@
 import {
   ChevronDownIcon,
   Cog6ToothIcon,
+  CurrencyRupeeIcon,
   GlobeAltIcon,
   InboxIcon,
   PowerIcon,
   PresentationChartBarIcon,
   ShoppingBagIcon,
-  UserCircleIcon,
+  UserCircleIcon
 } from "@heroicons/react/24/outline";
 import {
   Accordion,
@@ -42,6 +43,7 @@ export function SidebarWithBurgerMenu({ Navopen, onClose }) {
   const handleOpen = (value) => setAccordionOpen(accordionOpen === value ? 0 : value);
   const handleLogout = () => {
     dispatch(logoutCandidate());
+    dispatch(clearAuth());
     navigate('/candidate-login');
   };
   const handleUpgrade = () => setOpenModal(true);
@@ -226,8 +228,9 @@ export function SidebarWithBurgerMenu({ Navopen, onClose }) {
             Unlock opportunities to apply for jobs worldwide.
           </Typography>
           <div className="mt-8 bg-white p-6 rounded-xl shadow-md">
-            <Typography variant="h3" color="blue-gray" className="font-bold">
-              $100
+            <Typography variant="h3" color="blue-gray" className="font-bold">   1
+            <CurrencyRupeeIcon className="h-5 w-5" />
+         
             </Typography>
             <Typography color="blue-gray" className="mt-1 font-normal">
               One-time payment for unlimited access

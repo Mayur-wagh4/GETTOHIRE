@@ -1,5 +1,5 @@
 import { ArrowPathIcon, ChevronLeftIcon, ChevronRightIcon, UserGroupIcon } from "@heroicons/react/24/solid";
-import { Button, Dialog, DialogBody, DialogFooter, DialogHeader, IconButton, Input, Spinner, Typography } from "@material-tailwind/react";
+import { Button, Dialog, DialogBody, DialogFooter, IconButton, Input, Spinner, Typography } from "@material-tailwind/react";
 import { motion } from 'framer-motion';
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -93,12 +93,12 @@ const CandidateList = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8"
+      className="min-h-screen bg-gradient-to-br rounded-xl  from-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8"
     >
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <Typography variant="h2" color="blue-gray" className="font-bold">
-            Candidate List
+            Candidates
           </Typography>
           <Button
             color="blue"
@@ -106,7 +106,7 @@ const CandidateList = () => {
             className="flex items-center gap-2"
             onClick={handleRefresh}
           >
-            <ArrowPathIcon className="h-5 w-5" /> Refresh
+            <ArrowPathIcon className="h-5 w-5" />
           </Button>
         </div>
 
@@ -216,20 +216,35 @@ const CandidateList = () => {
         )}
       </div>
 
+   
       <Dialog open={deleteCandidateId !== null} handler={() => setDeleteCandidateId(null)}>
-        <DialogHeader>Confirm Deletion</DialogHeader>
+
         <DialogBody>
-          Are you sure you want to delete this candidate?
+          <Typography className="text-blue-gray-800 font-medium">
+            Are you sure you want to delete this candidate?
+          </Typography>
         </DialogBody>
         <DialogFooter>
-          <Button variant="text" color="red" onClick={() => setDeleteCandidateId(null)}>
-            Cancel
+        <Button
+            variant="gradient"
+            onClick={handleDelete}
+            color="red"
+            className="mr-1"
+          >
+            Yes 
           </Button>
-          <Button variant="gradient" color="blue" onClick={handleDelete}>
-            Confirm
+          <Button
+            variant="gradient"
+            color="blue-gray"
+
+            onClick={() => setDeleteCandidateId(null)}
+          >
+            No
           </Button>
+      
         </DialogFooter>
       </Dialog>
+
     </motion.div>
   );
 };
