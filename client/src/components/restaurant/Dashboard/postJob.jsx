@@ -56,7 +56,7 @@ const PostJob = () => {
   }, [location]);
   const checkPaymentStatus = async (transactionId) => {
     try {
-      const response = await axios.get(`http://localhost:3000/api-v1/payment/status?id=${transactionId}`);
+      const response = await axios.get(`http://43.204.238.196:3000/api-v1/payment/status?id=${transactionId}`);
       if (response.data.success) {
         setPaymentStatus('success');
         setDialogOpen(true);

@@ -8,7 +8,7 @@ import axios from 'axios';
 const BASE_URL = 'http://43.204.238.196:3000/api-v1';
 // const BASE_URL = 'http://localhost:3000/api-v1';
 =======
-const BASE_URL = 'http://43.204.238.196:3000/api-v1';
+
 >>>>>>> ab6c21994454ffd7f1b350284f0be90c27c24fbb
 
 // Utility function to get the auth token from the state

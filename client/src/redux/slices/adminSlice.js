@@ -5,7 +5,7 @@ import { setAuth } from './authSlice';
 const BASE_URL = 'http://43.204.238.196:3000/api-v1';
 // const BASE_URL = 'http://localhost:3000/api-v1';
 
-const BASE_URL = 'http://localhost:3000/api-v1';
+
 
 export const signInAdmin = createAsyncThunk(
   'admin/signIn',
