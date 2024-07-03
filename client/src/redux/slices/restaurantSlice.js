@@ -2,8 +2,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 import { setAuth } from "./authSlice";
 
-const BASE_URL = 'http://43.204.238.196:3000/api-v1';
-// const BASE_URL = "http://localhost:3000/api-v1";
+const BASE_URL = 'http://localhost:3000/api-v1';
 
 // Utility function to get the auth token from the state
 const getAuthToken = (getState) => {
