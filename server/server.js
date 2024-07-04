@@ -22,6 +22,8 @@ dbConnection();
 
 // middlenames
 app.use(cors());
+app.options('*', cors());
+
 app.use(xss());
 app.use(mongoSanitize());
 app.use(bodyParser.json());
