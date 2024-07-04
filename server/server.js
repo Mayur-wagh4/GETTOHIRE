@@ -21,19 +21,7 @@ const PORT = process.env.PORT ;
 dbConnection();
 
 // middlenames
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = ['https://gettohire.com', 'https://www.gettohire.com'];
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  }
-};
-
-app.use(cors(corsOptions));
-
+app.use(cors());
 app.use(xss());
 app.use(mongoSanitize());
 app.use(bodyParser.json());
