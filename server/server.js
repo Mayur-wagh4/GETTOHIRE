@@ -22,7 +22,7 @@ dbConnection();
 
 // middlenames
 app.use(cors());
-app.options('*', cors());
+app.options('*', cors()); 
 
 app.use(xss());
 app.use(mongoSanitize());
@@ -37,6 +37,9 @@ app.use(router);
 
 //error middleware
 app.use(errorMiddleware);
+app.get('/test-cors', (req, res) => {
+  res.json({ message: 'CORS is working!' });
+});
 
 app.listen(PORT, () => {
   console.log(`Dev Server running on port: ${PORT}`);
