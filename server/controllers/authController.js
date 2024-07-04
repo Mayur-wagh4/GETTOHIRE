@@ -3,8 +3,11 @@ import Restaurant from "../models/restaurantModel.js";
 import Users from "../models/userModel.js";
 
 export const signInAdmin = async (req, res, next) => {
+  console.log('api request checked');
   try {
     const { username, password } = req.body;
+    console.log(username);
+    console.log(password);
 
     // Check if the admin user exists
     const admin = await Admin.findOne({ username });
