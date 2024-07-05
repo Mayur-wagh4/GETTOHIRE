@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const BASE_URL = 'http://api.gettohire.com/api-v1';
+const BASE_URL = 'https://api.gettohire.com/api-v1';
 // const BASE_URL = 'http://43.204.238.196:3000/api-v1';
 // const BASE_URL = 'http://localhost:3000/api-v1';
 
