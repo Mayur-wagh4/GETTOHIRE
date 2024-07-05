@@ -21,8 +21,7 @@ const PORT = process.env.PORT ;
 dbConnection();
 
 // middlenames
-app.use(cors());
-app.options('*', cors()); 
+app.use(cors({ origin: '*' }));
 
 app.use(xss());
 app.use(mongoSanitize());
