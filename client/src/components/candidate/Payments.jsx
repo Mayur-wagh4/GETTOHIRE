@@ -28,7 +28,7 @@ const Payment = () => {
 
     try {
       // const response = await axios.post("http://localhost:3000/api-v1/payment/initiate", data);
-      const response = await axios.post("http://43.204.238.196:3000/api-v1/payment/initiate", data);
+      const response = await axios.post("https://api.gettohire.com/api-v1/payment/initiate", data);
       
       if (response.data && response.data.data.instrumentResponse.redirectInfo.url) {
         window.location.href = response.data.data.instrumentResponse.redirectInfo.url;

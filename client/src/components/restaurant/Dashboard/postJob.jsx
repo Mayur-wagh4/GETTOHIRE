@@ -56,7 +56,7 @@ const PostJob = () => {
   }, [location]);
   const checkPaymentStatus = async (transactionId) => {
     try {
-      const response = await axios.get(`http://43.204.238.196:3000/api-v1/payment/status?id=${transactionId}`);
+      const response = await axios.get(`https://api.gettohire.com/api-v1/payment/status?id=${transactionId}`);
       if (response.data.success) {
         setPaymentStatus('success');
         setDialogOpen(true);
@@ -129,7 +129,7 @@ const PostJob = () => {
     try {
       setIsLoading(true);
       // const res = await axios.post('http://localhost:3000/api-v1/payment/initiate', paymentData);
-      const res = await axios.post('http://43.204.238.196:3000/api-v1/payment/initiate', paymentData);
+      const res = await axios.post('https://api.gettohire.com/api-v1/payment/initiate', paymentData);
 
 
       if (res.data?.data?.instrumentResponse?.redirectInfo?.url) {
