@@ -56,7 +56,7 @@ export function SignIn() {
         <div className="w-full lg:w-3/5 mt-2">
           <div className="text-center">
             <Typography variant="h2" color="black" className="font-bold mb-4">Sign In</Typography>
-            <Typography variant="paragraph" color="gray" className="text-lg font-normal">Enter your USER ID and Password to Sign In.</Typography>
+            <Typography variant="paragraph" color="gray" className="text-lg font-normal">Enter your USER ID and PASSWORD to Sign In.</Typography>
           </div>
           <form className="mt-8 mb-2 mx-auto w-full max-w-screen-lg lg:w-1/2" onSubmit={handleSignIn}>
             <div className="mb-6 flex flex-col gap-6">

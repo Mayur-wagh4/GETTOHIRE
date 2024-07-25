@@ -43,13 +43,16 @@ export function SidebarWithBurgerMenu({ Navopen, onClose }) {
   const handleOpen = (value) => setAccordionOpen(accordionOpen === value ? 0 : value);
   const handleLogout = () => {
     dispatch(logoutCandidate());
-    dispatch(clearAuth());
     navigate('/candidate-login');
   };
   const handleUpgrade = () => setOpenModal(true);
   const handlePayment = () => {
     setOpenModal(false);
     navigate('/candidate/payment');
+  };
+
+  const closeSidenav = () => {
+    onClose();
   };
 
   const sidebarVariants = {
@@ -74,14 +77,16 @@ export function SidebarWithBurgerMenu({ Navopen, onClose }) {
             className="fixed inset-0 z-50"
           >
             <Drawer open={Navopen} onClose={onClose} className="p-0">
-              <div className="bg-gradient-to-br from-blue-600 to-indigo-800 h-full w-full shadow-xl">
+              <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 h-full w-full shadow-xl">
                 <div className="text-white p-6">
                   <Typography variant="h4" className="font-bold text-3xl mb-2">
                     Dashboard
                   </Typography>
-                  <Typography variant="h6" className="text-blue-200">
-                    Welcome, {details.name || 'User'}
-                  </Typography>
+                  <Typography variant="medium" className="hidden md:block">
+        <span className="text-white">Welcome,</span>{' '}
+              <span className="text-deep-orange-500">{details?.name || 'Candidate'}</span>
+              </Typography>
+
                 </div>
 
                 <List className="p-4 text-white">
@@ -96,9 +101,9 @@ export function SidebarWithBurgerMenu({ Navopen, onClose }) {
                       }
                     >
                       <ListItem className="p-0" selected={accordionOpen === 1}>
-                        <AccordionHeader onClick={() => handleOpen(1)} className="border-b-0 p-3 hover:bg-blue-700/50 rounded-lg transition-all duration-200">
+                        <AccordionHeader onClick={() => handleOpen(1)} className="border-b-0 p-3 hover:bg-gray-700/50 rounded-lg transition-all duration-200">
                           <ListItemPrefix>
-                            <PresentationChartBarIcon className="h-5 w-5" />
+                            <PresentationChartBarIcon className="h-5 text-white w-5" />
                           </ListItemPrefix>
                           <Typography color="white" className="mr-auto font-medium">
                             My Dashboard
@@ -107,18 +112,18 @@ export function SidebarWithBurgerMenu({ Navopen, onClose }) {
                       </ListItem>
                       <AccordionBody className="py-1">
                         <List className="p-0">
-                          <Link to='/candidate'>
-                            <ListItem className="hover:bg-blue-700/50 rounded-lg transition-all duration-200">
+                          <Link to='/candidate' onClick={closeSidenav}>
+                            <ListItem className="hover:bg-gray-700/50 rounded-lg text-white transition-all duration-200">
                               <ListItemPrefix>
-                                <UserCircleIcon className="h-5 w-5" />
+                                <UserCircleIcon className="h-5 text-white w-5" />
                               </ListItemPrefix>
                               Profile
                             </ListItem>
                           </Link>
-                          <Link to='/candidate/edit-details'>
-                            <ListItem className="hover:bg-blue-700/50 rounded-lg transition-all duration-200">
+                          <Link to='/candidate/edit-details' onClick={closeSidenav}>
+                            <ListItem className="hover:bg-gray-700/50 rounded-lg text-white transition-all duration-200">
                               <ListItemPrefix>
-                                <Cog6ToothIcon className="h-5 w-5" />
+                                <Cog6ToothIcon className="h-5 text-white w-5" />
                               </ListItemPrefix>
                               Edit Details
                             </ListItem>
@@ -139,9 +144,9 @@ export function SidebarWithBurgerMenu({ Navopen, onClose }) {
                       }
                     >
                       <ListItem className="p-0" selected={accordionOpen === 2}>
-                        <AccordionHeader onClick={() => handleOpen(2)} className="border-b-0 p-3 hover:bg-blue-700/50 rounded-lg transition-all duration-200">
+                        <AccordionHeader onClick={() => handleOpen(2)} className="border-b-0 p-3 hover:bg-gray-700/50 rounded-lg transition-all duration-200">
                           <ListItemPrefix>
-                            <ShoppingBagIcon className="h-5 w-5" />
+                            <ShoppingBagIcon className="h-5 text-white w-5" />
                           </ListItemPrefix>
                           <Typography color="white" className="mr-auto font-medium">
                             Jobs
@@ -150,18 +155,18 @@ export function SidebarWithBurgerMenu({ Navopen, onClose }) {
                       </ListItem>
                       <AccordionBody className="py-1">
                         <List className="p-0">
-                          <Link to='/jobs'>
-                            <ListItem className="hover:bg-blue-700/50 rounded-lg transition-all duration-200">
+                          <Link to='/jobs' onClick={closeSidenav}>
+                            <ListItem className="hover:bg-gray-700/50 rounded-lg text-white transition-all duration-200">
                               <ListItemPrefix>
-                                <ShoppingBagIcon className="h-5 w-5" />
+                                <ShoppingBagIcon className="h-5 text-white w-5" />
                               </ListItemPrefix>
                               Apply Jobs
                             </ListItem>
                           </Link>
-                          <Link to='/candidate/applied-jobs'>
-                            <ListItem className="hover:bg-blue-700/50 rounded-lg transition-all duration-200">
+                          <Link to='/candidate/applied-jobs' onClick={closeSidenav}>
+                            <ListItem className="hover:bg-gray-700/50 text-white rounded-lg transition-all duration-200">
                               <ListItemPrefix>
-                                <ShoppingBagIcon className="h-5 w-5" />
+                                <ShoppingBagIcon className="h-5 text-white w-5" />
                               </ListItemPrefix>
                               Applied Jobs
                             </ListItem>
@@ -171,44 +176,46 @@ export function SidebarWithBurgerMenu({ Navopen, onClose }) {
                     </Accordion>
                   </motion.div>
 
-                  <hr className="my-4 border-blue-400/50" />
+                  <hr className="my-4 border-gray-600" />
                   
                   <motion.div variants={listItemVariants}>
-                    <Link to='/candidate/Notifications'>
-                      <ListItem className="hover:bg-blue-700/50 rounded-lg transition-all duration-200">
+                    <Link to='/candidate/Notifications' onClick={closeSidenav}>
+                      <ListItem className="hover:bg-gray-700/50 rounded-lg transition-all duration-200">
                         <ListItemPrefix>
                           <InboxIcon className="h-5 w-5" />
                         </ListItemPrefix>
                         Notifications
                         <ListItemSuffix>
-                          <Chip value="0" size="sm" color="blue" className="rounded-full bg-blue-400 text-white" />
+                          <Chip value="0" size="sm" color="orange" className="rounded-full bg-deep-orange-500 text-white" />
                         </ListItemSuffix>
                       </ListItem>
                     </Link>
                   </motion.div>
 
                   <motion.div variants={listItemVariants}>
-                    <ListItem className="hover:bg-blue-700/50 rounded-lg transition-all duration-200" onClick={handleLogout}>
+                    <ListItem className="hover:bg-gray-700/50 rounded-lg transition-all duration-200" onClick={handleLogout}>
                       <ListItemPrefix>
-                        <PowerIcon className="h-5 w-5" />
+                        <PowerIcon className="h-5 text-red-500 w-5" />
                       </ListItemPrefix>
                       Log Out
                     </ListItem>
                   </motion.div>
                 </List>
 
-                <motion.div variants={listItemVariants} className="p-4 mt-8">
-                  <Button
-                    size="lg"
-                    fullWidth
-                    color="white"
-                    className="flex items-center justify-center gap-3 bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                    onClick={handleUpgrade}
-                  >
-                    <GlobeAltIcon className="h-5 w-5" />
-                    Upgrade to Apply Abroad
-                  </Button>
-                </motion.div>
+                {!details.isPremium && (
+                  <motion.div variants={listItemVariants} className="p-4 mt-8">
+                    <Button
+                      size="lg"
+                      fullWidth
+                      color="white"
+                      className="flex items-center justify-center gap-3 bg-gradient-to-r from-deep-orange-500 to-orange-500 hover:from-deep-orange-600 hover:to-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                      onClick={handleUpgrade}
+                    >
+                      <GlobeAltIcon className="h-5 w-5" />
+                      Upgrade to Apply Abroad
+                    </Button>
+                  </motion.div>
+                )}
               </div>
             </Drawer>
           </motion.div>
@@ -218,34 +225,34 @@ export function SidebarWithBurgerMenu({ Navopen, onClose }) {
       <Dialog 
         open={openModal} 
         handler={() => setOpenModal(false)}
-        className="bg-white shadow-xl rounded-2xl"
+        className="bg-white shadow-2xl rounded-xl overflow-hidden border border-orange-500/20"
       >
-        <DialogHeader className="bg-gradient-to-r from-blue-600 to-indigo-800 text-white rounded-t-2xl">
+        <DialogHeader className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white">
           Upgrade to Apply Jobs Outside India
         </DialogHeader>
-        <DialogBody divider className="bg-gray-100">
+        <DialogBody divider className="bg-gradient-to-b from-gray-100 to-gray-200 p-6">
           <Typography color="blue-gray" className="mt-4 font-normal">
             Unlock opportunities to apply for jobs worldwide.
           </Typography>
-          <div className="mt-8 bg-white p-6 rounded-xl shadow-md">
-            <Typography variant="h3" color="blue-gray" className="font-bold">   1
-            <CurrencyRupeeIcon className="h-5 w-5" />
-         
+          <div className="mt-8 bg-white p-6 rounded-xl shadow-md border border-gray-200">
+            <Typography variant="h3" color="blue-gray" className="font-bold flex items-center">
+              <CurrencyRupeeIcon className="h-8 w-8 mr-2 text-deep-orange-500" />
+              1
             </Typography>
             <Typography color="blue-gray" className="mt-1 font-normal">
               One-time payment for unlimited access
             </Typography>
           </div>
         </DialogBody>
-        <DialogFooter className="space-x-2 bg-gray-100 rounded-b-2xl">
+        <DialogFooter className="space-x-2 bg-gradient-to-b from-gray-100 to-gray-200 p-4">
           <Button variant="outlined" color="blue-gray" onClick={() => setOpenModal(false)}>
             Cancel
           </Button>
           <Button 
             variant="gradient" 
-            color="blue" 
+            color="deep-orange" 
             onClick={handlePayment}
-            className="bg-gradient-to-r from-blue-600 to-indigo-800 hover:from-blue-700 hover:to-indigo-900 transition-all duration-300"
+            className="bg-gradient-to-r from-deep-orange-500 to-orange-500 hover:from-deep-orange-600 hover:to-orange-600 transition-all duration-300"
           >
             Pay Now
           </Button>

@@ -1,13 +1,21 @@
 import { Button, Card, CardBody, CardFooter, CardHeader, Dialog, Input, Option, Select, Typography } from '@material-tailwind/react';
-import axios from 'axios';
-import { motion } from 'framer-motion';
-import React, { useCallback, useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { default as React, useCallback, useEffect, useState } from 'react';
 import { FaGlobeAmericas, FaMapMarkerAlt } from "react-icons/fa";
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { createAbroadJob, createJob, fetchRestaurantDetails } from '../../../redux/slices/restaurantSlice';
-const FIXED_PRICE = 499;
+import {
+  checkPaymentStatus,
+  createAbroadJob,
+  createJob,
+  fetchRestaurantDetails,
+  initiateJobPostPayment
+} from '../../../redux/slices/restaurantSlice';
 
+const FIXED_PRICE = 1; // Fixed recruitment cost
+const API_BASE_URL = "http://localhost:3000/api-v1/restaurants"; // API base URL
+
+// Options for job departments and designations
 const jobDepartmentOptions = {
   Kitchen: ['Executive Chef', 'Sous Chef', 'Chef de Partie (CDP)', 'Demi Chef de Partie (DCDP)', 'Assistant Cook', 'Kitchen Helper', 'Commis 1', 'Commis 2', 'Commis 3'],
   'F&B': ['Restaurant Manager', 'Waiter', 'Waitress', 'Captain', 'Bartender', 'Sommelier', 'Food and Beverage Manager'],
@@ -15,12 +23,23 @@ const jobDepartmentOptions = {
   Management: ['General Manager', 'Assistant General Manager', 'Hotel Manager', 'Operations Manager']
 };
 
+// Options for kitchen cuisines
 const kitchenCuisineOptions = ['Italian', 'Chinese', 'Japanese', 'Indian', 'Mexican', 'Mediterranean', 'Thai', 'Middle Eastern', 'CONTINENTAL', 'TANDOOR', 'Bakery', 'SOUTH INDIAN'];
 
 const PostJob = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { details: restaurantDetails, Name: restaurantName } = useSelector((state) => state.restaurant);
+  const { 
+    details: restaurantDetails, 
+    paymentLoading, 
+    paymentError, 
+    paymentUrl,
+    transactionId,
+    paymentStatus,
+    paymentStatusLoading,
+    paymentStatusError
+  } = useSelector((state) => state.restaurant);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     restaurantName: '',
@@ -35,11 +54,11 @@ const PostJob = () => {
     numberOfRequirements: '',
   });
   const [isAbroad, setIsAbroad] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [paymentStatus, setPaymentStatus] = useState('pending');
+  const [isComponentMounted, setIsComponentMounted] = useState(false);
 
   useEffect(() => {
+    setIsComponentMounted(true);
     if (!restaurantDetails) {
       dispatch(fetchRestaurantDetails());
     } else {
@@ -47,41 +66,6 @@ const PostJob = () => {
     }
   }, [dispatch, restaurantDetails]);
 
-  useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const transactionId = searchParams.get('id');
-    if (transactionId) {
-      checkPaymentStatus(transactionId);
-    }
-  }, [location]);
-  const checkPaymentStatus = async (transactionId) => {
-    try {
-      const response = await axios.get(`https://api.gettohire.com/api-v1/payment/status?id=${transactionId}`);
-      if (response.data.success) {
-        setPaymentStatus('success');
-        setDialogOpen(true);
-        setTimeout(() => {
-          setDialogOpen(false);
-          handleJobPosting();
-        }, 2000);
-      } else {
-        setPaymentStatus('failed');
-        setError('Payment failed. Please try again.');
-        setDialogOpen(true);
-        setTimeout(() => {
-          setDialogOpen(false);
-        }, 2000);
-      }
-    } catch (error) {
-      console.error("Error checking payment status:", error);
-      setPaymentStatus('failed');
-      setError('Error checking payment status. Please try again.');
-      setDialogOpen(true);
-      setTimeout(() => {
-        setDialogOpen(false);
-      }, 2000);
-    }
-  };
   const validateForm = useCallback(() => {
     const requiredFields = ['restaurantName', 'jobDesignation', 'salary', 'location', 'jobType', 'jobDepartment', 'numberOfRequirements'];
     if (isAbroad) {
@@ -109,9 +93,7 @@ const PostJob = () => {
   }, []);
 
   const handlePayment = useCallback(async () => {
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     if (!restaurantDetails) {
       setError('Restaurant details not available');
@@ -119,47 +101,63 @@ const PostJob = () => {
     }
 
     const paymentData = {
-      name: formData.restaurantName,
       amount: FIXED_PRICE,
-      number: restaurantDetails.mobileNumber,
-      MUID: 'MUID' + Date.now(),
-      transactionId: 'T' + Date.now(),
     };
 
     try {
-      setIsLoading(true);
-      // const res = await axios.post('http://localhost:3000/api-v1/payment/initiate', paymentData);
-      const res = await axios.post('https://api.gettohire.com/api-v1/payment/initiate', paymentData);
-
-
-      if (res.data?.data?.instrumentResponse?.redirectInfo?.url) {
-        window.location.href = res.data.data.instrumentResponse.redirectInfo.url;
+      const resultAction = await dispatch(initiateJobPostPayment(paymentData));
+      if (initiateJobPostPayment.fulfilled.match(resultAction)) {
+        const paymentWindow = window.open(resultAction.payload.paymentUrl, '_blank', 'width=800,height=600');
+        if (paymentWindow) {
+          pollPaymentStatus(resultAction.payload.transactionId);
+        } else {
+          setError('Please allow pop-ups to complete the payment');
+        }
       } else {
         throw new Error('Payment Failed');
       }
     } catch (error) {
-      setIsLoading(false);
-      setError('Try Again');
+      setError('Payment initiation failed. Please try again.');
       console.error(error);
     }
-  }, [formData, restaurantDetails, validateForm]);
+  }, [dispatch, restaurantDetails, validateForm]);
+  const pollPaymentStatus = useCallback((transactionId) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const resultAction = await dispatch(checkPaymentStatus(transactionId));
+        if (checkPaymentStatus.fulfilled.match(resultAction) && resultAction.payload.success) {
+          clearInterval(pollInterval);
+          setDialogOpen(true);
+          setTimeout(() => {
+            setDialogOpen(false);
+            handleJobPosting(transactionId);
+          }, 2000);
+        }
+      } catch (error) {
+        console.error('Error checking payment status:', error);
+      }
+    }, 5000);
 
-  const handleJobPosting = async () => {
-    if (!validateForm()) {
-      return;
-    }
+    setTimeout(() => {
+      clearInterval(pollInterval);
+      if (paymentStatus !== 'success') {
+        setError('Payment timeout. Please try again.');
+        setDialogOpen(true);
+      }
+    }, 300000);
+  }, [dispatch, paymentStatus]);
 
-    setIsLoading(true);
+  const handleJobPosting = useCallback(async (transactionId) => {
+    if (!validateForm()) return;
 
     try {
-      await dispatch(isAbroad ? createAbroadJob(formData) : createJob(formData)).unwrap();
-      setIsLoading(false);
+      const jobData = { ...formData, transactionId };
+      await dispatch(isAbroad ? createAbroadJob(jobData) : createJob(jobData)).unwrap();
       navigate('/restaurant/posted-jobs');
     } catch (err) {
-      setIsLoading(false);
-      setError(err.message || 'Fail to post job');
+      setError(err.message || 'Failed to post job');
     }
-  };
+  }, [dispatch, formData, isAbroad, navigate, validateForm]);
 
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
@@ -171,50 +169,59 @@ const PostJob = () => {
       await handleJobPosting();
     }
   }, [paymentStatus, handlePayment, handleJobPosting]);
+
+  if (!isComponentMounted) {
+    return null; // or a loading indicator
+  }
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="container mx-auto px-4 py-8"
-    >
-      <Card className="overflow-hidden">
-        <CardHeader
-          floated={false}
-          className="h-80 bg-gradient-to-r from-blue-500 to-purple-500"
-        >
-          <div className="flex flex-col items-center justify-center h-full text-white">
-            <motion.div
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="text-center"
-            >
-              <Typography variant="h3" className="font-bold text-shadow mb-4">
-                Post a New Job
-              </Typography>
-              <div className="flex justify-center space-x-4">
-                <Button
-                  color={isAbroad ? "blue-gray" : "white"}
-                  onClick={() => setIsAbroad(false)}
-                  className="flex items-center gap-2"
-                >
-                  <FaMapMarkerAlt /> India Job
-                </Button>
-                <Button
-                  color={isAbroad ? "white" : "blue-gray"}
-                  onClick={() => setIsAbroad(true)}
-                  className="flex items-center gap-2"
-                >
-                  <FaGlobeAmericas /> Abroad Job
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        </CardHeader>
-        <CardBody className="px-6 py-10">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <AnimatePresence>
+    {isComponentMounted && (
+      <motion.div
+        initial={{ opacity: 0, y: -50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="flex flex-col items-center min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 p-4 lg:p-8"
+      >
+        <Card className="w-full max-w-4xl bg-white shadow-2xl rounded-xl overflow-hidden border border-orange-500/20">
+          <CardHeader floated={false} className="h-64 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900">
+            <div className="flex flex-col items-center justify-center h-full text-white">
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5 }}
+                className="text-center"
+              >
+                <Typography variant="h3" className="font-bold text-shadow mb-4">
+                  Post a New Job
+                </Typography>
+                <div className="flex justify-center space-x-4">
+                  <Button
+                    color={isAbroad ? "blue-gray" : "red"}
+                    onClick={() => setIsAbroad(false)}
+                    className="flex items-center gap-2"
+                  >
+                    <FaMapMarkerAlt /> India Job
+                  </Button>
+                  <Button
+                    color={isAbroad ? "red" : "blue-gray"}
+                    onClick={() => setIsAbroad(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <FaGlobeAmericas /> Abroad Job
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          </CardHeader>
+          <CardBody className="px-6 py-8">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="grid grid-cols-1 md:grid-cols-2 gap-6"
+              >
               <Input
                 label="Restaurant Name"
                 name="restaurantName"
@@ -311,45 +318,51 @@ const PostJob = () => {
                 <Option value="full-time">Full-Time</Option>
                 <Option value="part-time">Part-Time</Option>
               </Select>
-            </div>
-            <div className="mt-6">
-              <Typography variant="h6">Fixed Recruitment Cost: ₹{FIXED_PRICE}</Typography>
-            </div>
-          </form>
-        </CardBody>
-        <CardFooter className="flex justify-center pt-2">
-          <Button
-            size="lg"
-            color="blue"
-            ripple="light"
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className="flex items-center gap-2"
+              </motion.div>
+              <div className="mt-6">
+                  <Typography variant="h6" color="blue-gray" className="font-bold">
+                    Fixed Recruitment Cost: ₹{FIXED_PRICE}
+                  </Typography>
+                </div>
+              </form>
+            </CardBody>
+            <CardFooter className="flex justify-center pt-2">
+              <Button
+                size="lg"
+                className="bg-deep-orange-500 text-white"
+                onClick={handleSubmit}
+                disabled={paymentLoading || paymentStatusLoading}
+              >
+                {paymentLoading || paymentStatusLoading ? "Processing..." : 
+                 paymentStatus === 'success' ? "Post Job" :
+                 `Pay ₹${FIXED_PRICE} & Post Job`}
+              </Button>
+            </CardFooter>
+          </Card>
+          {(error || paymentError || paymentStatusError) && (
+            <Typography color="red" className="mt-4 text-center">
+              {error || paymentError || paymentStatusError}
+            </Typography>
+          )}
+          <Dialog 
+            open={dialogOpen} 
+            handler={() => setDialogOpen(false)}
+            className="bg-white rounded-xl overflow-hidden shadow-2xl"
           >
-            {isLoading ? "Processing..." : 
-             paymentStatus === 'success' ? "Post Job" :
-             `Pay ₹${FIXED_PRICE} & Post Job`}
-          </Button>
-        </CardFooter>
-      </Card>
-      {error && (
-        <Typography color="red" className="mt-4 text-center">
-          {error}
-        </Typography>
+            <div className="p-6">
+              <Typography variant="h5" color={paymentStatus === 'success' ? 'green' : 'red'} className="mb-2 font-bold">
+                {paymentStatus === 'success' ? 'Payment Successful' : 'Payment Failed'}
+              </Typography>
+              <Typography color="blue-gray">
+                {paymentStatus === 'success' 
+                  ? 'Your payment was successful. Posting your job now...' 
+                  : 'Your payment failed. Please try again.'}
+              </Typography>
+            </div>
+          </Dialog>
+        </motion.div>
       )}
-      <Dialog open={dialogOpen} handler={() => setDialogOpen(false)}>
-  <div className="p-6">
-    <Typography variant="h5" color={paymentStatus === 'success' ? 'green' : 'red'} className="mb-2">
-      {paymentStatus === 'success' ? 'Payment Successful' : 'Payment Failed'}
-    </Typography>
-    <Typography>
-      {paymentStatus === 'success' 
-        ? 'Your payment was successful. Posting your job now...' 
-        : 'Your payment failed. Please try again.'}
-    </Typography>
-  </div>
-</Dialog>
-    </motion.div>
+    </AnimatePresence>
   );
 };
 

@@ -64,6 +64,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  transactions: [{
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Transactions'
+}],
   appliedJobs: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Jobs'

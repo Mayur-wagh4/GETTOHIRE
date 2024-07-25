@@ -16,8 +16,6 @@ import {
 import { motion } from "framer-motion";
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import Spinner from "../common/Spinner";
-
 import {
   clearError,
   fetchAppliedJobs,
@@ -25,6 +23,7 @@ import {
 } from "../../redux/slices/candidateSlice";
 import Footer from "../common/footer";
 import ComplexNavbar from "../common/navbar";
+import Spinner from "../common/Spinner";
 import JobFilter from "./JobFilter";
 import JobList from "./JobList";
 
@@ -36,14 +35,14 @@ const Jobs = () => {
     totalJobs,
     currentPage,
     totalPages,
+    successMessage,
     jobPosts: allJobs,
     userId,
     appliedJobs,
   } = useSelector((state) => state.candidate);
+
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [applyTrigger, setApplyTrigger] = useState(false);
-
   const [filters, setFilters] = useState({
     jobType: "",
     jobDepartment: "",
@@ -52,12 +51,23 @@ const Jobs = () => {
     cuisine: "",
     minSalary: "",
   });
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+
   useEffect(() => {
     dispatch(fetchJobPosts());
     if (userId) {
       dispatch(fetchAppliedJobs(userId));
     }
-  }, [dispatch, userId, applyTrigger]);
+  }, [dispatch, userId]);
+
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        dispatch(clearError());
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage, dispatch]);
 
   const filteredJobs = useMemo(() => {
     return allJobs.filter((job) => {
@@ -72,13 +82,8 @@ const Jobs = () => {
         searchMatch &&
         notApplied &&
         (!filters.jobType || job.jobType === filters.jobType) &&
-        (!filters.jobType || job.jobType === filters.jobType) &&
-        (!filters.jobDepartment ||
-          job.jobDepartment === filters.jobDepartment) &&
-        (!filters.location ||
-          job.location
-            .toLowerCase()
-            .includes(filters.location.toLowerCase())) &&
+        (!filters.jobDepartment || job.jobDepartment === filters.jobDepartment) &&
+        (!filters.location || job.location.toLowerCase().includes(filters.location.toLowerCase())) &&
         (!filters.country ||
           (filters.country === "India" && job.country === "India") ||
           (filters.country === "Abroad" && job.country !== "India")) &&
@@ -88,19 +93,27 @@ const Jobs = () => {
     });
   }, [allJobs, filters, searchTerm, appliedJobs]);
 
-  const handleFilterChange = (newFilters) => setFilters(newFilters);
-  const handlePrevPage = () =>
-    currentPage > 1 && dispatch(fetchJobPosts(currentPage - 1));
-  const handleNextPage = () =>
-    currentPage < totalPages && dispatch(fetchJobPosts(currentPage + 1));
+  const handlePageChange = (direction) => {
+    const newPage = direction === 'prev' ? currentPage - 1 : currentPage + 1;
+    if (newPage >= 1 && newPage <= totalPages) {
+      dispatch(fetchJobPosts(newPage));
+    }
+  };
+
   const openDrawer = () => setIsDrawerOpen(true);
   const closeDrawer = () => setIsDrawerOpen(false);
-  if (loading) return <Spinner />;
-  if (error)
-    return (
-      <ErrorMessage message={error} onClose={() => dispatch(clearError())} />
-    );
 
+  const handleApplyFilters = () => {
+    setShowSuccessMessage(true);
+    dispatch(fetchJobPosts(1)); // Fetch the first page with new filters
+    setTimeout(() => {
+      setShowSuccessMessage(false);
+      closeDrawer();
+    }, 3000); // Hide after 3 seconds
+  };
+
+  if (loading) return <Spinner />;
+  
   return (
     <>
       <div>
@@ -121,26 +134,60 @@ const Jobs = () => {
             </Typography>
 
             <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-              <div className="w-full  flex gap-4">
+              <div className="w-full flex gap-4">
                 <Input
                   type="text"
                   placeholder="Search jobs..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  icon={
-                    <MagnifyingGlassIcon className="h-5 w-5 text-orange-800" />
-                  }
+                  icon={<MagnifyingGlassIcon className="h-5 w-5 text-orange-800" />}
                   className="!border !border-orange-500/20 bg-gray-700 text-white shadow-lg shadow-black/5 ring-4 ring-transparent placeholder:text-gray-400 focus:!border-orange-500 focus:!border-t-orange-500 focus:ring-orange-500/10"
                   labelProps={{ className: "hidden" }}
                 />
                 <Button
-                  className="flex items-center bg-orange-800 justify-center h-10  capitalize"
+                  className="flex items-center bg-orange-800 justify-center h-10 capitalize"
                   onClick={openDrawer}
                 >
-                  <FunnelIcon strokeWidth={2} className="h-5  w-5" />
+                  <FunnelIcon strokeWidth={2} className="h-5 w-5" />
                 </Button>
               </div>
             </div>
+
+            {(successMessage || showSuccessMessage || error) && (
+              <div className="mb-4 p-4 bg-gray-800 border border-orange-500/20 rounded-md shadow-md">
+                {successMessage && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-green-600 mb-2"
+                  >
+                    {successMessage}
+                  </motion.div>
+                )}
+                {showSuccessMessage && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-green-600 mb-2"
+                  >
+                    Filters applied successfully!
+                  </motion.div>
+                )}
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-red-600"
+                  >
+                    {error}
+                  </motion.div>
+                )}
+              </div>
+            )}
+
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -152,8 +199,8 @@ const Jobs = () => {
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
-              onPrevPage={handlePrevPage}
-              onNextPage={handleNextPage}
+              onPrevPage={() => handlePageChange('prev')}
+              onNextPage={() => handlePageChange('next')}
             />
           </Card>
         </motion.main>
@@ -162,9 +209,9 @@ const Jobs = () => {
       <Drawer
         open={isDrawerOpen}
         onClose={closeDrawer}
-        className="p-4 bg-gray-800 rounded-xl "
+        className="p-4 bg-gray-800 rounded-xl"
         placement="left"
-        overlayClassName="fixed  "
+        overlayClassName="fixed"
       >
         <div className="mb-6 flex items-center justify-between">
           <Typography variant="h5">Job Filters</Typography>
@@ -172,18 +219,12 @@ const Jobs = () => {
             <XMarkIcon className="h-5 w-5" />
           </IconButton>
         </div>
-        <JobFilter filters={filters} onFilterChange={handleFilterChange} />
-        <div className="mt-8  ml-4 flex gap-4">
+        <JobFilter filters={filters} onFilterChange={setFilters} />
+        <div className="mt-8 ml-4 flex gap-4">
           <Button size="sm" color="orange" onClick={closeDrawer}>
             Cancel
           </Button>
-          <Button
-            size="sm"
-            onClick={() => {
-              handleFilterChange(filters);
-              closeDrawer();
-            }}
-          >
+          <Button size="sm" onClick={handleApplyFilters}>
             Apply
           </Button>
         </div>
@@ -191,12 +232,12 @@ const Jobs = () => {
     </>
   );
 };
+
 const ErrorMessage = ({ message, onClose }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();
-    }, 1000);
-
+    }, 3000);
     return () => clearTimeout(timer);
   }, [onClose]);
 
@@ -224,39 +265,34 @@ const ErrorMessage = ({ message, onClose }) => {
     </div>
   );
 };
+
 const Pagination = ({ currentPage, totalPages, onPrevPage, onNextPage }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: 0.5, duration: 0.5 }}
-    className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4"
+    className="flex justify-center mt-8"
   >
     <Button
-      color="orange"
-      variant="outlined"
       size="sm"
-      className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-full hover:bg-orange-500/10 transition-all duration-300 shadow-md hover:shadow-lg w-full sm:w-auto"
+      color="orange"
+      className="mr-2"
       onClick={onPrevPage}
       disabled={currentPage === 1}
     >
-      <ArrowLeftIcon strokeWidth={2} className="h-4 w-4" />
+      <ArrowLeftIcon className="h-5 w-5" />
     </Button>
-    <Typography
-      color="white"
-      className="flex items-center text-sm sm:text-base md:text-lg font-medium"
-    >
-      Page <span className="mx-2 text-orange-500">{currentPage}</span> of{" "}
-      <span className="ml-2 text-orange-500">{totalPages}</span>
+    <Typography className="flex items-center mx-2 text-white">
+      Page {currentPage} of {totalPages}
     </Typography>
     <Button
-      color="orange"
-      variant="gradient"
       size="sm"
-      className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-full hover:shadow-lg transition-all duration-300 w-full sm:w-auto"
+      color="orange"
+      className="ml-2"
       onClick={onNextPage}
       disabled={currentPage === totalPages}
     >
-      <ArrowRightIcon strokeWidth={2} className="h-4 w-4" />
+      <ArrowRightIcon className="h-5 w-5" />
     </Button>
   </motion.div>
 );

@@ -86,14 +86,14 @@ const JobCard = ({ job, onApply }) => {
   );
 };
 
-const InfoItem = ({ icon, label, value }) => (
+const InfoItem = ({ icon,label = "N/A", value = "N/A"}) => (
   <div className="flex items-center space-x-2">
     {icon}
     <div>
-      <Typography color="white" className="text-xs font-medium">
+      <Typography variant="h6" className="text-xs font-medium">
         {label}
       </Typography>
-      <Typography color="white" className="text-md">
+      <Typography variant="h6"  className="text-md">
         {value}
       </Typography>
     </div>

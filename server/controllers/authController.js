@@ -3,13 +3,12 @@ import Restaurant from "../models/restaurantModel.js";
 import Users from "../models/userModel.js";
 
 export const signInAdmin = async (req, res, next) => {
-  console.log('api request checked');
   try {
     const { username, password } = req.body;
     console.log(username);
     console.log(password);
 
-    // Check if the admin user exists
+
     const admin = await Admin.findOne({ username });
     if (!admin) {
       return res
@@ -17,12 +16,12 @@ export const signInAdmin = async (req, res, next) => {
         .json({ message: "Admin not found for username: " + username });
     }
 
-    // Replace with proper password hashing and comparison logic
+
     if (password !== admin.password) {
       return res.status(400).json({ message: "Invalid username or password" });
     }
 
-    // Create and return a JWT token
+
     const token = admin.createJWT();
 
     res.status(200).json({
@@ -42,7 +41,7 @@ export const signInAdmin = async (req, res, next) => {
   }
 };
 
-// Register User
+
 export const registerUser = async (req, res) => {
   try {
     const { email, password, candidateData } = req.body;

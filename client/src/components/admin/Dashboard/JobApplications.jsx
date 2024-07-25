@@ -93,7 +93,7 @@ const JobApplications = () => {
               </Typography>
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
-                  <Typography className="text-gray-700"><strong>Salary:</strong> ${job.salary}</Typography>
+                  <Typography className="text-gray-700"><strong>Salary:</strong>{job.salary}</Typography>
                   <Typography className="text-gray-700"><strong>Department:</strong> {job.jobDepartment}</Typography>
                 </div>
                 <div>
@@ -121,7 +121,7 @@ const JobApplications = () => {
                         <Typography className="text-gray-600 text-sm">
                           {applicant.position} in {applicant.department}
                         </Typography>
-                        <Typography className="text-gray-600 text-sm">Current Salary: ${applicant.currentSalary}</Typography>
+                        <Typography className="text-gray-600 text-sm">Current Salary: {applicant.currentSalary}</Typography>
                       </div>
                       <Button size="sm" color="blue" variant="text">View Profile</Button>
                     </Card>

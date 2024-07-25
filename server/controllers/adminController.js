@@ -7,7 +7,7 @@ export const getAllApplications = async (req, res) => {
     const applications = await Jobs.aggregate([
       {
         $lookup: {
-          from: 'users', // Use lowercase collection name
+          from: 'users', 
           localField: 'applicants',
           foreignField: '_id',
           as: 'applicants',

@@ -13,12 +13,12 @@ import { motion } from "framer-motion";
 import React, { useEffect, useState } from "react";
 import { FaEdit, FaSave, FaTimes } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
+import { LogoNewImage } from "../../../assets/assets";
 import {
   fetchRestaurantDetails,
   updateRestaurantProfile,
 } from "../../../redux/slices/restaurantSlice";
 
-// Move formatFieldName outside of the component
 const formatFieldName = (fieldName) => {
   return fieldName
     .replace(/([A-Z])/g, " $1")
@@ -47,14 +47,10 @@ const EditProfile = () => {
     try {
       await dispatch(updateRestaurantProfile(newDetails)).unwrap();
       const updatedDetails = await dispatch(fetchRestaurantDetails()).unwrap();
-      
-      // Reset states with updated data
+
       setNewDetails(updatedDetails);
-      setEditMode({}); // Reset all edit modes
-      
-      // Show su      alert("Profile updated successfully!");
+      setEditMode({});
     } catch (error) {
-      // Handle error (you can implement this as needed)
       console.error("Failed to update profile:", error);
       alert("Failed to update profile. Please try again.");
     }
@@ -69,7 +65,6 @@ const EditProfile = () => {
     "foodAccommodation",
     "mobileNumber",
   ];
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -77,26 +72,26 @@ const EditProfile = () => {
       transition={{ duration: 0.5 }}
       className="container mx-auto px-4 py-8"
     >
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden  shadow-lg backdrop-blur-sm bg-opacity-90 border border-orange-500/20">
         <CardHeader
           floated={false}
-          className="h-80 bg-gradient-to-r from-blue-500 to-purple-500"
+          className="h-80 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900"
         >
           <div className="flex flex-col items-center justify-center h-full text-white">
             <motion.img
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5 }}
-              src={details.profileUrl || "https://source.unsplash.com/random/200x200/?restaurant"}
+              src={LogoNewImage}
               alt="Restaurant"
-              className="rounded-full w-40 h-40 border-4 border-white shadow-xl mb-4"
+              className="rounded-full w-40 h-40 border-4 border-orange-500/20 shadow-xl mb-4"
             />
             <Typography variant="h3" className="font-bold text-shadow">
               Edit Profile
             </Typography>
           </div>
         </CardHeader>
-        <CardBody className="px-6 py-10">
+        <CardBody className="px-6 py-10 text-white">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {editableFields.map((field) => (
               <EditableField
@@ -112,8 +107,7 @@ const EditProfile = () => {
         </CardBody>
         <CardFooter className="flex justify-center pt-2">
           <Button
-            color="blue"
-            ripple="light"
+            color="orange"
             onClick={handleUpdate}
             disabled={loading}
             className="flex items-center gap-2"
@@ -122,7 +116,7 @@ const EditProfile = () => {
               "Updating..."
             ) : (
               <>
-                <FaSave className="h-5 w-5" /> Save Changes
+                <FaSave className="h-5  w-5" /> Save Changes
               </>
             )}
           </Button>
@@ -136,21 +130,28 @@ const EditProfile = () => {
     </motion.div>
   );
 };
-
 const EditableField = ({ field, value, isEditing, onChange, onToggleEdit }) => {
   const fieldName = formatFieldName(field);
 
   const renderInput = () => {
     if (field === "dutyTimings") {
       return (
-        <Select value={value} onChange={(val) => onChange(val)} disabled={!isEditing}>
+        <Select
+          value={value}
+          onChange={(val) => onChange(val)}
+          disabled={!isEditing}
+        >
           <Option value="8 hours">8 hours</Option>
           <Option value="10 hours">10 hours</Option>
         </Select>
       );
     } else if (field === "foodAccommodation") {
       return (
-        <Select value={value} onChange={(val) => onChange(val)} disabled={!isEditing}>
+        <Select
+          value={value}
+          onChange={(val) => onChange(val)}
+          disabled={!isEditing}
+        >
           <Option value="Provided">Provided</Option>
           <Option value="Not provided">Not provided</Option>
         </Select>
@@ -174,22 +175,26 @@ const EditableField = ({ field, value, isEditing, onChange, onToggleEdit }) => {
       transition={{ duration: 0.5 }}
       className="relative"
     >
-      <Typography variant="small" color="blue-gray" className="font-semibold mb-2">
+      <Typography
+        variant="small"
+        color="blue-gray"
+        className="font-semibold mb-2"
+      >
         {fieldName}
       </Typography>
       <div className="flex items-center">
         {renderInput()}
         <Button
-          color={isEditing ? "red" : "blue"}
-          buttonType="link"
+          color={isEditing ? "red" : "gray"}
           size="sm"
-          rounded={true}
-          iconOnly={true}
-          ripple="dark"
           className="ml-2"
           onClick={onToggleEdit}
         >
-          {isEditing ? <FaTimes className="h-4 w-4" /> : <FaEdit className="h-4 w-4" />}
+          {isEditing ? (
+            <FaTimes className="h-4  w-4" />
+          ) : (
+            <FaEdit className="h-4  w-4" />
+          )}
         </Button>
       </div>
     </motion.div>

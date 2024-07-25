@@ -59,6 +59,10 @@ const restaurantSchema = new Schema(
       type: String,
       trim: true,
     },
+    transactions: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Transactions'
+    }],
     jobPosts: [
       {
         type: Schema.Types.ObjectId,

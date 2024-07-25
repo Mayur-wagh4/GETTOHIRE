@@ -84,10 +84,10 @@ const EditDetails = () => {
       initial={{ opacity: 0, y: -50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="flex justify-center items-center min-h-screen bg-gray-100 p-4"
+      className="flex justify-center items-center min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 p-4 lg:p-8"
     >
-      <Card className="w-full max-w-4xl bg-white shadow-xl rounded-xl overflow-hidden">
-        <CardHeader floated={false} className="h-56 bg-blue-500">
+      <Card className="w-full max-w-4xl bg-white shadow-2xl rounded-xl overflow-hidden border border-orange-500/20">
+        <CardHeader floated={false} className="h-64 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900">
           <motion.div
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -97,20 +97,20 @@ const EditDetails = () => {
             <img
               src={LogoNewImage}
               alt="profile-picture"
-              className="rounded-full w-32 h-32 border-4 border-white shadow-lg"
+              className="rounded-full w-36 h-36 border-4 border-white shadow-lg"
             />
           </motion.div>
         </CardHeader>
-        <CardBody className="text-center">
+        <CardBody className="text-center px-6 py-8">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Typography variant="h3" color="blue-gray" className="mb-2 font-bold">
+            <Typography variant="h3" color="blue-gray" className="mb-2 font-bold text-3xl">
               {newDetails.name || 'N/A'}
             </Typography>
-            <Typography color="blue" className="font-medium mb-4">
+            <Typography className="font-medium text-deep-orange-500 mb-6 text-lg">
               {newDetails.position || 'N/A'} at {newDetails.department || 'N/A'}
             </Typography>
           </motion.div>
@@ -118,11 +118,11 @@ const EditDetails = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4"
+            className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-6"
           >
             {editableFields.map((field) => (
-              <div key={field} className="bg-blue-50 p-3 rounded-lg">
-                <Typography color="blue-gray" className="font-medium">
+              <div key={field} className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg shadow-md border border-gray-200">
+                <Typography color="blue-gray" className="font-medium text-sm mb-1">
                   {formatFieldName(field)}
                 </Typography>
                 <div className="flex items-center mt-1">
@@ -131,7 +131,7 @@ const EditDetails = () => {
                     value={newDetails[field] || ''}
                     onChange={(e) => handleChange(field, e.target.value)}
                     readOnly={!editMode[field]}
-                    className="flex-grow bg-transparent border-none focus:outline-none text-blue-gray-800 font-bold"
+                    className="flex-grow bg-transparent border-none focus:outline-none text-blue-gray-800 font-bold text-lg"
                   />
                   <IconButton size="sm" onClick={() => toggleEditMode(field)}>
                     <EditIcon className="h-4 w-4" />
@@ -141,11 +141,11 @@ const EditDetails = () => {
             ))}
           </motion.div>
         </CardBody>
-        <CardFooter className="flex flex-col items-center pt-2">
+        <CardFooter className="flex flex-col items-center pt-2 pb-6">
           <button
             onClick={handleUpdate}
             disabled={updateStatus.loading}
-            className="bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-600 transition duration-300"
+            className="bg-deep-orange-500 text-white font-bold py-2 px-4 rounded hover:bg-deep-orange-600 transition duration-300"
           >
             {updateStatus.loading ? "Updating..." : "Update Profile"}
           </button>

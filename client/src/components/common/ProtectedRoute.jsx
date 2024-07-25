@@ -19,11 +19,11 @@ const ProtectedRoute = ({ allowedUserTypes }) => {
   if (!allowedUserTypes.includes(userType)) {
     switch (userType) {
       case 'candidate':
-        return <Navigate to="/candidate" replace />;
+        return <Navigate to="/candidate-login" replace />;
       case 'restaurant':
-        return <Navigate to="/restaurant" replace />;
+        return <Navigate to="/restaurant-login" replace />;
       case 'admin':
-        return <Navigate to="/admin" replace />;
+        return <Navigate to="/admin-login" replace />;
       default:
         return <Navigate to="/" replace />;
     }

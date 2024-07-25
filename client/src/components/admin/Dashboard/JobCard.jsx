@@ -35,7 +35,7 @@ const JobCard = ({ job, onDelete, deleteInProgress }) => {
     ...initialDetails,
     { label: "Cuisine", value: job.cuisine },
     { label: "Location", value: `${job.location}, ${job.country}` },
-    { label: "Salary", value: `$${job.salary.toLocaleString()}` },
+    { label: "Salary", value: `${job.salary.toLocaleString()}` },
   ];
 
   const handleDelete = () => {

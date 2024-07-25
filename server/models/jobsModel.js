@@ -34,13 +34,21 @@ const jobSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Users'
     }],
+    restaurant: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Restaurant',
+},
+transaction: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Transactions'
+},
+
   },
   { timestamps: true }
 );
 
-// Middleware to calculate recruitment cost
 jobSchema.pre('save', function (next) {
-  // Calculate recruitment cost as 5% of the salary
+
   this.recruitmentCost = this.salary * 0.05;
   next();
 });

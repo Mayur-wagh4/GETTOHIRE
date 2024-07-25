@@ -21,20 +21,7 @@ function Home() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const horizontalScrollContainerStyle = {
-    display: 'flex',
-    overflowX: 'auto',
-    scrollBehavior: 'smooth',
-    overflowY: 'hidden',
-    maxheight:'auto',
-    perspective: '1000px',
-    height: '100%',
-    scrollbarWidth: 'none',
-    msOverflowStyle: 'none',
-    '&::-webkit-scrollbar': {
-      display: 'none'
-    },
-  };
+ 
   
   const horizontalScrollItemStyle = {
     display: 'inline-block',
@@ -45,7 +32,17 @@ function Home() {
     transformStyle: 'preserve-3d',
     
   };
-
+  const horizontalScrollContainerStyle = {
+    display: 'flex',
+    overflowX: 'auto',
+    scrollBehavior: 'smooth',
+    overflowY: 'hidden',
+    maxHeight: 'auto',
+    perspective: '1000px',
+    height: '100%',
+    scrollbarWidth: 'none', // For Firefox
+    msOverflowStyle: 'none', // For Internet Explorer and Edge
+  };
   const variants = {
     initial: { rotateY: -10, opacity: 0 },
     enter: { rotateY: 0, opacity: 1 },

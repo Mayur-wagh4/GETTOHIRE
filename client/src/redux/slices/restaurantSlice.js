@@ -2,8 +2,8 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 import { setAuth } from "./authSlice";
 
-const BASE_URL = 'https://api.gettohire.com/api-v1';
-// const BASE_URL = 'http://43.204.238.196:3000/api-v1';
+
+const BASE_URL = import.meta.env.VITE_API_URL;
 
 // Utility function to get the auth token from the state
 const getAuthToken = (getState) => {
@@ -184,6 +184,51 @@ export const createAbroadJob = createAsyncThunk(
   }
 );
 
+export const initiateJobPostPayment = createAsyncThunk(
+  "restaurant/initiateJobPostPayment",
+  async (paymentData, { getState, rejectWithValue }) => {
+    const token = getAuthToken(getState);
+    try {
+      const response = await axios.post(
+        `${BASE_URL}/restaurants/initiate-job-post-payment`,
+        paymentData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data || "Failed to initiate payment"
+      );
+    }
+  }
+);
+
+export const checkPaymentStatus = createAsyncThunk(
+  "restaurant/checkPaymentStatus",
+  async (transactionId, { getState, rejectWithValue }) => {
+    const token = getAuthToken(getState);
+    try {
+      const response = await axios.get(
+        `${BASE_URL}/restaurants/check-payment-status/${transactionId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data || "Failed to check payment status"
+      );
+    }
+  }
+);
+
 // Restaurant Slice
 const restaurantSlice = createSlice({
   name: "restaurant",
@@ -308,6 +353,32 @@ const restaurantSlice = createSlice({
       .addCase(createAbroadJob.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || "Failed to create abroad job";
+      })
+      .addCase(initiateJobPostPayment.pending, (state) => {
+        state.paymentLoading = true;
+        state.paymentError = null;
+      })
+      .addCase(initiateJobPostPayment.fulfilled, (state, action) => {
+        state.paymentLoading = false;
+        state.paymentUrl = action.payload.paymentUrl;
+        state.transactionId = action.payload.transactionId;
+      })
+      .addCase(initiateJobPostPayment.rejected, (state, action) => {
+        state.paymentLoading = false;
+        state.paymentError = action.payload || "Failed to initiate payment";
+      })
+      .addCase(checkPaymentStatus.pending, (state) => {
+        state.paymentStatusLoading = true;
+        state.paymentStatusError = null;
+      })
+      .addCase(checkPaymentStatus.fulfilled, (state, action) => {
+        state.paymentStatusLoading = false;
+        state.paymentStatus = action.payload.success ? "success" : "failed";
+      })
+      .addCase(checkPaymentStatus.rejected, (state, action) => {
+        state.paymentStatusLoading = false;
+        state.paymentStatusError =
+          action.payload || "Failed to check payment status";
       });
   },
 });

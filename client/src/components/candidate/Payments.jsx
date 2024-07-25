@@ -1,84 +1,200 @@
 import {
   Alert,
   Button,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  DialogHeader,
   Spinner,
-  Typography
+  Typography,
 } from "@material-tailwind/react";
-import axios from "axios";
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useCallback, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  checkPaymentStatus,
+  initiatePayment,
+  resetPayment,
+} from "../../redux/slices/candidateSlice";
+
+const PaymentStatus = {
+  INITIATED: "INITIATED",
+  PENDING: "PENDING",
+  COMPLETED: "COMPLETED",
+  FAILED: "FAILED",
+  TIMEOUT: "TIMEOUT",
+};
+
+const AlertColors = {
+  [PaymentStatus.INITIATED]: "blue",
+  [PaymentStatus.PENDING]: "yellow",
+  [PaymentStatus.COMPLETED]: "green",
+  [PaymentStatus.FAILED]: "red",
+  [PaymentStatus.TIMEOUT]: "orange",
+};
+
+const StatusMessages = {
+  [PaymentStatus.INITIATED]:
+    "Payment initiated. Please complete the payment on the opened page.",
+  [PaymentStatus.PENDING]:
+    "Payment is pending. Please wait while we confirm your payment.",
+  [PaymentStatus.COMPLETED]: "Payment successful! Thank you for your purchase.",
+  [PaymentStatus.FAILED]:
+    "Payment failed. Please try again or contact support.",
+  [PaymentStatus.TIMEOUT]:
+    "Payment not completed within the time limit. Please try again.",
+};
 
 const Payment = () => {
-  const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const dispatch = useDispatch();
+  const { details, paymentData, paymentStatus, paymentLoading, paymentError } =
+    useSelector((state) => state.candidate);
+  const [showTimeoutDialog, setShowTimeoutDialog] = useState(false);
 
-  const data = {
-    name: "Mayur",
-    amount: 1,
-    number: "1234567891",
-    MUID: `MUID${Date.now()}`,
-    transactionId: `T${Date.now()}`,
+  const handlePayment = useCallback(
+    async (e) => {
+      e.preventDefault();
+      dispatch(resetPayment());
+      const result = await dispatch(
+        initiatePayment({
+          userId: details._id,
+          name: details.name,
+          amount: 1,
+          number: details.contact,
+        })
+      );
+      if (initiatePayment.fulfilled.match(result) && result.payload.paymentUrl) {
+        window.open(result.payload.paymentUrl, "_blank");
+      }
+    },
+    [dispatch, details]
+  );
+
+  useEffect(() => {
+    if (paymentData?.transactionId && paymentStatus === PaymentStatus.INITIATED) {
+      const startTime = Date.now();
+      const timeoutDuration = 2 * 60 * 1000;
+
+      const pollPaymentStatus = async () => {
+        const result = await dispatch(checkPaymentStatus(paymentData.transactionId));
+        if (checkPaymentStatus.fulfilled.match(result)) {
+          if (result.payload.state === PaymentStatus.COMPLETED) {
+            return;
+          }
+
+          if (Date.now() - startTime >= timeoutDuration) {
+            dispatch(resetPayment());
+            setShowTimeoutDialog(true);
+            return;
+          }
+
+          setTimeout(pollPaymentStatus, 5000); // Check every 5 seconds
+        }
+      };
+
+      pollPaymentStatus();
+    }
+  }, [dispatch, paymentData, paymentStatus]);
+
+  const renderPaymentStatus = () => {
+    if (!paymentData) return null;
+
+    const alertColor = AlertColors[paymentStatus] || "gray";
+    const statusMessage =
+      StatusMessages[paymentStatus] ||
+      paymentError ||
+      "Unknown payment status. Please contact support.";
+
+    return (
+      <>
+        <Alert color={alertColor} className="mt-4">
+          {statusMessage}
+        </Alert>
+        {paymentData.transactionId && (
+          <Typography variant="small" className="mt-2">
+            Transaction ID: {paymentData.transactionId}
+          </Typography>
+        )}
+        {[PaymentStatus.INITIATED, PaymentStatus.PENDING].includes(
+          paymentStatus
+        ) && (
+          <Typography variant="small" className="mt-2">
+            Checking payment status...
+          </Typography>
+        )}
+      </>
+    );
   };
 
-  const handlePayment = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
+  const showPaymentForm =
+    !paymentData || [PaymentStatus.FAILED, PaymentStatus.TIMEOUT].includes(paymentStatus);
 
-    try {
-      // const response = await axios.post("http://localhost:3000/api-v1/payment/initiate", data);
-      const response = await axios.post("https://api.gettohire.com/api-v1/payment/initiate", data);
-      
-      if (response.data && response.data.data.instrumentResponse.redirectInfo.url) {
-        window.location.href = response.data.data.instrumentResponse.redirectInfo.url;
-      } else {
-        throw new Error("No redirect URL received from payment initiation");
-      }
-    } catch (error) {
-      console.error("Payment initiation error:", error);
-      setError(error.response?.data?.message || "An error occurred while initiating payment");
-    } finally {
-      setIsLoading(false);
-    }
+  const handleTimeoutDialogClose = () => {
+    setShowTimeoutDialog(false);
+    dispatch(resetPayment());
   };
 
   return (
-    <form onSubmit={handlePayment} className="p-6 bg-gray-800 rounded-lg shadow-md">
-      <Typography variant="h5" className="mb-6 text-center">
-        Payment Details
-      </Typography>
-      <div className="mb-4">
-        <Typography variant="h6">
-          <strong>Name:</strong> {data.name}
-        </Typography>
-      </div>
-      <div className="mb-4">
-        <Typography variant="h6">
-          <strong>Number:</strong> {data.number}
-        </Typography>
-      </div>
-      <div className="mb-4">
-        <Typography variant="h6">
-          <strong>Amount:</strong> {data.amount} Rs
-        </Typography>
-      </div>
-      {error && (
-        <Alert color="red" className="mb-4">
-          {error}
+    <div className="p-6 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-lg shadow-lg">
+      {showPaymentForm && (
+        <form onSubmit={handlePayment} className="mb-6">
+          <Typography variant="h5" className="mb-6 text-center text-white">
+            Payment Details
+          </Typography>
+          {["name", "contact"].map((field) => (
+            <div key={field} className="mb-4">
+              <Typography variant="h6" className="text-white">
+                <strong>{field.charAt(0).toUpperCase() + field.slice(1)}:</strong>{" "}
+                {details[field]}
+              </Typography>
+            </div>
+          ))}
+          <div className="mb-4">
+            <Typography variant="h6" className="text-white">
+              <strong>Amount:</strong> 1 Rs
+            </Typography>
+          </div>
+          <div className="flex justify-center">
+            <Button
+              type="submit"
+              color="deep-orange"
+              className="w-full bg-gradient-to-r from-deep-orange-500 to-orange-500 hover:from-deep-orange-600 hover:to-orange-600 transition-all duration-300"
+              disabled={paymentLoading}
+            >
+              {paymentLoading ? <Spinner size="sm" className="mr-2" /> : "Pay Now"}
+            </Button>
+          </div>
+        </form>
+      )}
+
+      {renderPaymentStatus()}
+
+      {paymentData?.paymentUrl && paymentStatus === PaymentStatus.INITIATED && (
+        <Alert color="blue" className="mt-4 text-white">
+          If the payment page didn't open automatically,
+          <Button
+            color="blue"
+            onClick={() => window.open(paymentData.paymentUrl, "_blank")}
+            className="ml-2 text-white"
+          >
+            click here
+          </Button>
         </Alert>
       )}
-      <div className="flex justify-center">
-        <Button
-          type="submit"
-          color="green"
-          className="w-full"
-          disabled={isLoading}
-        >
-          {isLoading ? <Spinner size="sm" className="mr-2" /> : "Pay Now"}
-        </Button>
-      </div>
-    </form>
+
+      <Dialog open={showTimeoutDialog} handler={handleTimeoutDialogClose}>
+        <DialogHeader className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white">
+          Payment Time Limit Exceeded
+        </DialogHeader>
+        <DialogBody className="bg-gray-200 text-gray-800">
+          The payment was not completed within the 2-minute time limit. Please try again.
+        </DialogBody>
+        <DialogFooter className="bg-gray-200">
+          <Button variant="gradient" color="deep-orange" onClick={handleTimeoutDialogClose}>
+            <span>OK</span>
+          </Button>
+        </DialogFooter>
+      </Dialog>
+    </div>
   );
 };
 

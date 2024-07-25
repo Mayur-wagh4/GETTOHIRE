@@ -1,8 +1,8 @@
 import React from "react";
 import { Route, Routes } from "react-router-dom";
-import PaymentFailure from "../components/common/PaymentFailure";
+
 import PaymentStatus from "../components/common/PaymentStatus";
-import PaymentSuccess from "../components/common/PaymentSuccess";
+
 import Home from "../components/home/home";
 import Privacy from "../components/home/privacy";
 import Refund from "../components/home/refund";
@@ -46,16 +46,21 @@ const AppRoutes = () => {
   return (
     <div className="App">
       <Routes>
-      <Route path="*" element={<div>Catch-all: {window.location.pathname}</div>} />
+        <Route
+          path="*"
+          element={<div>Catch-all: {window.location.pathname}</div>}
+        />
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/refund" element={<Refund />} />
         <Route path="/jobs" element={<Jobs />} />
-        <Route path="/payment-status/id=:transactionId" element={<PaymentStatus />} />
-        <Route path="/payment/success" element={<PaymentSuccess/>} />
-        <Route path="/payment/failure" element={<PaymentFailure/>} />
+
+        <Route
+          path="/payment-status/:transactionId"
+          element={<PaymentStatus />}
+        />
 
         {/* Authentication Routes */}
         <Route path="/candidate-login" element={<CandidateLogin />} />
@@ -85,6 +90,7 @@ const AppRoutes = () => {
             <Route path="postjob" element={<PostJobs />} />
           </Route>
         </Route>
+
 
         {/* Protected Admin Routes */}
         <Route element={<ProtectedRoute allowedUserTypes={["admin"]} />}>

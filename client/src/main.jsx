@@ -32,7 +32,7 @@ const RootComponent = () => {
           <ThemeProvider>
             <Provider store={store}>
     <App />
-  </Provider>,
+  </Provider>
           </ThemeProvider>
         </BrowserRouter>
       )}
