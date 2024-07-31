@@ -2,7 +2,6 @@ import axios from "axios";
 import crypto from "crypto";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-import NodeCache from 'node-cache';
 import { createLogger, format, transports } from 'winston';
 import Jobs from "../models/jobsModel.js";
 import Transactions from "../models/transactionModel.js";
@@ -22,8 +21,6 @@ const logger = createLogger({
     new transports.File({ filename: 'combined.log' })
   ]
 });
-
-const cache = new NodeCache({ stdTTL: 600 }); // 10 minutes cache
 
 const {
   MERCHANT_ID,
