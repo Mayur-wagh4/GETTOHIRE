@@ -2,25 +2,11 @@ import axios from "axios";
 import crypto from "crypto";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-import { createLogger, format, transports } from 'winston';
 import Jobs from "../models/jobsModel.js";
 import Transactions from "../models/transactionModel.js";
 import Users from "../models/userModel.js";
 
 dotenv.config();
-
-const logger = createLogger({
-  level: 'info',
-  format: format.combine(
-    format.timestamp(),
-    format.json()
-  ),
-  transports: [
-    new transports.Console(),
-    new transports.File({ filename: 'error.log', level: 'error' }),
-    new transports.File({ filename: 'combined.log' })
-  ]
-});
 
 const {
   MERCHANT_ID,
@@ -33,15 +19,15 @@ const {
   PHONEPE_BASE_URL,
 } = process.env;
 
-const saltIndex = "1";
+const SALT_INDEX = "1";
 
 const createChecksum = (payload, endpoint) => {
   const string = payload + endpoint + SALT_KEY;
-  return `${crypto.createHash("sha256").update(string).digest("hex")}###${saltIndex}`;
+  return `${crypto.createHash("sha256").update(string).digest("hex")}###${SALT_INDEX}`;
 };
 
 const handleError = (res, error, message) => {
-  logger.error(`${message}: ${error}`);
+  console.error(`${message}: ${error}`);
   res.status(500).json({
     success: false,
     message: "Internal server error. Please try again later.",
@@ -50,12 +36,11 @@ const handleError = (res, error, message) => {
 };
 
 export const initiatePayment = async (req, res) => {
-  logger.info("Initiating payment...");
   try {
-    const { userId, name, amount, number } = req.body;
+    const { userId, amount, number } = req.body;
     const transactionId = `T${Date.now()}`;
 
-    const data = {
+    const paymentData = {
       merchantId: MERCHANT_ID,
       merchantTransactionId: transactionId,
       merchantUserId: `MUID${userId}`,
@@ -64,28 +49,22 @@ export const initiatePayment = async (req, res) => {
       redirectMode: "GET",
       callbackUrl: PAYMENT_CALLBACK_URL,
       mobileNumber: number,
-      paymentInstrument: {
-        type: "PAY_PAGE",
-      },
+      paymentInstrument: { type: "PAY_PAGE" },
     };
 
-    const payload = Buffer.from(JSON.stringify(data)).toString("base64");
+    const payload = Buffer.from(JSON.stringify(paymentData)).toString("base64");
     const checksum = createChecksum(payload, "/pg/v1/pay");
 
-    const options = {
-      method: "POST",
-      url: `${PHONEPE_BASE_URL}/pay`,
-      headers: {
-        accept: "application/json",
-        "Content-Type": "application/json",
-        "X-VERIFY": checksum,
-      },
-      data: {
-        request: payload,
-      },
-    };
-
-    const response = await axios.request(options);
+    const response = await axios.post(`${PHONEPE_BASE_URL}/pay`, 
+      { request: payload },
+      {
+        headers: {
+          accept: "application/json",
+          "Content-Type": "application/json",
+          "X-VERIFY": checksum,
+        },
+      }
+    );
 
     if (response.data.success) {
       await Transactions.create({
@@ -136,8 +115,8 @@ export const handlePaymentCallback = async (req, res) => {
       return res.status(404).json({ success: false, message: "Transaction not found." });
     }
 
-    if (transaction.userType === "Users") {
-      await updatePremiumStatus(transaction.userId, transaction.status === "SUCCESS");
+    if (transaction.userType === "Users" && transaction.status === "SUCCESS") {
+      await Users.findByIdAndUpdate(transaction.userId, { isPremium: true });
     }
 
     res.status(200).json({ success: true, message: "Payment callback processed successfully." });
@@ -149,73 +128,54 @@ export const handlePaymentCallback = async (req, res) => {
 export const checkPaymentStatus = async (req, res) => {
   try {
     const { transactionId } = req.params;
-
-    console.log(`Checking payment status for transaction ID: ${transactionId}`);
-
     const url = `${PHONEPE_BASE_URL}/status/${MERCHANT_ID}/${transactionId}`;
     const stringToHash = `/pg/v1/status/${MERCHANT_ID}/${transactionId}${SALT_KEY}`;
-    const xVerify = `${crypto.createHash("sha256").update(stringToHash).digest("hex")}###${saltIndex}`;
+    const xVerify = `${crypto.createHash("sha256").update(stringToHash).digest("hex")}###${SALT_INDEX}`;
 
-    console.log(`Requesting payment status from PhonePe: ${url}`);
-
-    const options = {
-      method: "GET",
-      url: url,
+    const response = await axios.get(url, {
       headers: {
         accept: "application/json",
         "Content-Type": "application/json",
         "X-MERCHANT-ID": MERCHANT_ID,
         "X-VERIFY": xVerify,
       },
-    };
-
-    const response = await axios.request(options);
-
-    console.log(`Received response from PhonePe:`, response.data);
+    });
 
     if (response.data.success) {
-      const paymentData = response.data.data;
-      const { state } = paymentData;
-
-      console.log(`Payment state: ${state}`);
-
+      const { state, amount, transactionId: phonepeTransactionId, merchantTransactionId, responseCode, paymentInstrument } = response.data.data;
+      
       let redirectUrl;
       let user;
-      if (state === "COMPLETED") {
-        console.log(`Payment completed successfully`);
-        redirectUrl = PAYMENT_SUCCESS_URL;
-        user = await Users.findOneAndUpdate(
-          { _id: paymentData.merchantUserId.substring(4) },
-          { isPremium: true },
-          { new: true }
-        );
-      } else if (state === "PENDING") {
-        console.log(`Payment is still pending`);
-        redirectUrl = PAYMENT_PENDING_URL;
-      } else {
-        console.log(`Payment failed or in an unexpected state`);
-        redirectUrl = PAYMENT_FAILED_URL;
+      
+      switch (state) {
+        case "COMPLETED":
+          redirectUrl = PAYMENT_SUCCESS_URL;
+          user = await Users.findOneAndUpdate(
+            { _id: response.data.data.merchantUserId.substring(4) },
+            { isPremium: true },
+            { new: true, select: '_id name email isPremium' }
+          );
+          break;
+        case "PENDING":
+          redirectUrl = PAYMENT_PENDING_URL;
+          break;
+        default:
+          redirectUrl = PAYMENT_FAILED_URL;
       }
 
       res.json({
         success: true,
         message: "Payment status fetched successfully.",
-        transactionId: paymentData.transactionId,
-        merchantTransactionId: paymentData.merchantTransactionId,
-        amount: paymentData.amount,
-        state: state,
-        responseCode: paymentData.responseCode,
-        paymentInstrument: paymentData.paymentInstrument,
-        redirectUrl: redirectUrl,
-        user: user ? {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          isPremium: user.isPremium
-        } : undefined
+        transactionId: phonepeTransactionId,
+        merchantTransactionId,
+        amount,
+        state,
+        responseCode,
+        paymentInstrument,
+        redirectUrl,
+        user
       });
     } else {
-      console.log(`Failed to fetch payment status from PhonePe`);
       res.json({
         success: false,
         message: "Failed to fetch payment status.",
@@ -224,31 +184,11 @@ export const checkPaymentStatus = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Error checking payment status:", error);
     handleError(res, error, "Error checking payment status");
   }
 };
 
-const updatePremiumStatus = async (userId, isPremium) => {
-  try {
-    const user = await Users.findByIdAndUpdate(
-      userId,
-      { isPremium: isPremium },
-      { new: true }
-    );
-
-    if (!user) {
-      console.error(`User not found for ID: ${userId}`);
-      return;
-    }
-
-    console.log(`Premium status updated for user: ${userId} to ${isPremium}`);
-  } catch (error) {
-    console.error("Error updating premium status:", error);
-  }
-};
-
-export const updateUser = async (req, res, next) => {
+export const updateUser = async (req, res) => {
   const {
     name,
     email,
@@ -259,52 +199,29 @@ export const updateUser = async (req, res, next) => {
     cuisine,
     currentSalary,
     isAbroadStudent,
+    user: { userId }
   } = req.body;
 
   try {
-    if (
-      !name ||
-      !email ||
-      !contact ||
-      !location ||
-      !department ||
-      !position ||
-      currentSalary === undefined ||
-      isAbroadStudent === undefined
-    ) {
+    if (!name || !email || !contact || !location || !department || !position || currentSalary === undefined || isAbroadStudent === undefined) {
       throw new Error("Please provide all required fields.");
     }
-
-    const userId = req.body.user.userId;
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(404).json({ message: `Invalid User ID: ${userId}` });
     }
 
-    const updateUser = {
-      name,
-      email,
-      contact,
-      location,
-      department,
-      position,
-      cuisine,
-      currentSalary,
-      isAbroadStudent,
-    };
-
-    const user = await Users.findByIdAndUpdate(userId, updateUser, {
-      new: true,
-    });
+    const user = await Users.findByIdAndUpdate(
+      userId,
+      { name, email, contact, location, department, position, cuisine, currentSalary, isAbroadStudent },
+      { new: true, select: '-password' }
+    );
 
     if (!user) {
-      return res
-        .status(404)
-        .json({ message: `User not found with ID: ${userId}` });
+      return res.status(404).json({ message: `User not found with ID: ${userId}` });
     }
 
     const token = user.createJWT();
-    user.password = undefined;
 
     res.status(200).json({
       success: true,
@@ -313,12 +230,11 @@ export const updateUser = async (req, res, next) => {
       token,
     });
   } catch (error) {
-    console.error("Error updating user:", error.message);
-    res.status(500).json({ message: "Internal server error. Please try again later." });
+    handleError(res, error, "Error updating user");
   }
 };
 
-export const getUser = async (req, res, next) => {
+export const getUser = async (req, res) => {
   try {
     const { userId } = req.body;
 
@@ -326,27 +242,19 @@ export const getUser = async (req, res, next) => {
       return res.status(404).json({ message: `Invalid User ID: ${userId}` });
     }
 
-    const user = await Users.findById(userId);
+    const user = await Users.findById(userId).select('-password');
 
     if (!user) {
-      return res
-        .status(404)
-        .json({ message: `User not found with ID: ${userId}` });
+      return res.status(404).json({ message: `User not found with ID: ${userId}` });
     }
 
-    user.password = undefined;
-
-    res.status(200).json({
-      success: true,
-      data: user,
-    });
+    res.status(200).json({ success: true, data: user });
   } catch (error) {
-    console.error("Error fetching user:", error.message);
-    res.status(500).json({ message: "Internal server error. Please try again later." });
+    handleError(res, error, "Error fetching user");
   }
 };
 
-export const getCandidateAppliedJobs = async (req, res, next) => {
+export const getCandidateAppliedJobs = async (req, res) => {
   try {
     const { userId } = req.body;
 
@@ -357,31 +265,24 @@ export const getCandidateAppliedJobs = async (req, res, next) => {
     const user = await Users.findById(userId).populate("appliedJobs");
 
     if (!user) {
-      return res
-        .status(404)
-        .json({ message: `User with ID ${userId} not found.` });
+      return res.status(404).json({ message: `User with ID ${userId} not found.` });
     }
 
     res.status(200).json(user.appliedJobs);
   } catch (error) {
-    console.error("Error fetching candidate applied jobs:", error.message);
-    res.status(500).json({ message: "Internal server error. Please try again later." });
+    handleError(res, error, "Error fetching candidate applied jobs");
   }
 };
 
-export const getJobPosts = async (req, res, next) => {
+export const getJobPosts = async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
-
     const skip = (page - 1) * limit;
-    const jobs = await Jobs.find()
-      .skip(skip)
-      .limit(Number(limit))
-      .sort({ createdAt: -1 });
 
-    const totalJobs = await Jobs.countDocuments();
-
-    console.log(`Fetched ${jobs.length} jobs out of ${totalJobs} total jobs`);
+    const [jobs, totalJobs] = await Promise.all([
+      Jobs.find().skip(skip).limit(Number(limit)).sort({ createdAt: -1 }),
+      Jobs.countDocuments()
+    ]);
 
     res.status(200).json({
       success: true,
@@ -391,12 +292,11 @@ export const getJobPosts = async (req, res, next) => {
       pages: Math.ceil(totalJobs / limit),
     });
   } catch (error) {
-    console.error("Error fetching job posts:", error);
-    res.status(500).json({ message: "Internal server error. Please try again later." });
+    handleError(res, error, "Error fetching job posts");
   }
 };
 
-export const getJobById = async (req, res, next) => {
+export const getJobById = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -413,85 +313,59 @@ export const getJobById = async (req, res, next) => {
       });
     }
 
-    res.status(200).json({
-      success: true,
-      job,
-    });
+    res.status(200).json({ success: true, job });
   } catch (error) {
-    console.error("Error fetching job by ID:", error);
-    res.status(500).json({ message: "Internal server error. Please try again later." });
+    handleError(res, error, "Error fetching job by ID");
   }
 };
 
-export const applyJob = async (req, res, next) => {
+export const applyJob = async (req, res) => {
   try {
     const { userId, jobId } = req.body;
 
-    if (
-      !mongoose.Types.ObjectId.isValid(userId) ||
-      !mongoose.Types.ObjectId.isValid(jobId)
-    ) {
-      console.log(`Invalid user ID: ${userId} or job ID: ${jobId}`);
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(jobId)) {
       return res.status(404).send(`Invalid user ID or job ID`);
     }
 
-    const user = await Users.findById(userId);
-    const job = await Jobs.findById(jobId);
+    const [user, job] = await Promise.all([
+      Users.findById(userId),
+      Jobs.findById(jobId)
+    ]);
 
     if (!user) {
-      console.log(`User with ID ${userId} not found.`);
-      return res
-        .status(404)
-        .json({ message: `User with ID ${userId} not found.` });
+      return res.status(404).json({ message: `User with ID ${userId} not found.` });
     }
 
     if (!job) {
-      console.log(`Job with ID ${jobId} not found.`);
-      return res
-        .status(404)
-        .json({ message: `Job with ID ${jobId} not found.` });
+      return res.status(404).json({ message: `Job with ID ${jobId} not found.` });
     }
 
     if (job.country !== "India" && !user.isPremium) {
-      console.log(
-        `User with ID ${userId} is not premium and cannot apply for job ID ${jobId} outside India.`
-      );
       return res.status(403).json({
         success: false,
         message: "You need to upgrade to premium to apply for this job.",
       });
     }
 
-    if (!user.appliedJobs.includes(jobId)) {
-      user.appliedJobs.push(jobId);
-      await user.save();
-      console.log(`User with ID ${userId} applied for job ID ${jobId}.`);
-
-      if (!job.applicants.includes(userId)) {
-        job.applicants.push(userId);
-        await job.save();
-        console.log(
-          `Added user ID ${userId} to applicants for job ID ${jobId}.`
-        );
-      }
-
-      res.status(200).json({
-        success: true,
-        message: "You have successfully applied for the job.",
-        appliedJobs: user.appliedJobs,
-      });
-    } else {
-      console.log(
-        `User with ID ${userId} has already applied for job ID ${jobId}.`
-      );
-      res.status(400).json({
+    if (user.appliedJobs.includes(jobId)) {
+      return res.status(400).json({
         success: false,
         message: "You have already applied for this job.",
         appliedJobs: user.appliedJobs,
       });
     }
+
+    user.appliedJobs.push(jobId);
+    job.applicants.push(userId);
+
+    await Promise.all([user.save(), job.save()]);
+
+    res.status(200).json({
+      success: true,
+      message: "You have successfully applied for the job.",
+      appliedJobs: user.appliedJobs,
+    });
   } catch (error) {
-    console.error("Error applying for job:", error);
-    res.status(500).json({ message: "Internal server error. Please try again later." });
+    handleError(res, error, "Error applying for job");
   }
 };
