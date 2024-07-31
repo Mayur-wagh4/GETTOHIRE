@@ -33,67 +33,79 @@ const AlertColors = {
 };
 
 const StatusMessages = {
-  [PaymentStatus.INITIATED]:
-    "Payment initiated. Please complete the payment on the opened page.",
-  [PaymentStatus.PENDING]:
-    "Payment is pending. Please wait while we confirm your payment.",
+  [PaymentStatus.INITIATED]: "Payment initiated. Please complete the payment on the opened page.",
+  [PaymentStatus.PENDING]: "Payment is pending. Please wait while we confirm your payment.",
   [PaymentStatus.COMPLETED]: "Payment successful! Thank you for your purchase.",
-  [PaymentStatus.FAILED]:
-    "Payment failed. Please try again or contact support.",
-  [PaymentStatus.TIMEOUT]:
-    "Payment not completed within the time limit. Please try again.",
+  [PaymentStatus.FAILED]: "Payment failed. Please try again or contact support.",
+  [PaymentStatus.TIMEOUT]: "Payment not completed within the time limit. Please try again.",
 };
 
 const Payment = () => {
   const dispatch = useDispatch();
-  const { details, paymentData, paymentStatus, paymentLoading, paymentError } =
-    useSelector((state) => state.candidate);
+  const { details, paymentData, paymentStatus, paymentLoading, paymentError } = useSelector((state) => state.candidate);
   const [showTimeoutDialog, setShowTimeoutDialog] = useState(false);
 
-  const handlePayment = useCallback(
-    async (e) => {
-      e.preventDefault();
-      dispatch(resetPayment());
-      const result = await dispatch(
-        initiatePayment({
-          userId: details._id,
-          name: details.name,
-          amount: 1,
-          number: details.contact,
-        })
-      );
-      if (initiatePayment.fulfilled.match(result) && result.payload.paymentUrl) {
-        window.open(result.payload.paymentUrl, "_blank");
-      }
-    },
-    [dispatch, details]
-  );
+  const handlePayment = useCallback(async (e) => {
+    e.preventDefault();
+    dispatch(resetPayment());
+    const result = await dispatch(
+      initiatePayment({
+        userId: details._id,
+        name: details.name,
+        amount: 1,
+        number: details.contact,
+      })
+    );
+    if (initiatePayment.fulfilled.match(result) && result.payload.paymentUrl) {
+      window.open(result.payload.paymentUrl, "_blank");
+    }
+  }, [dispatch, details]);
+
+  const handlePaymentStatus = useCallback(async (transactionId) => {
+    const result = await dispatch(checkPaymentStatus(transactionId));
+    if (checkPaymentStatus.fulfilled.match(result)) {
+      return result.payload.state;
+    }
+    return null;
+  }, [dispatch]);
 
   useEffect(() => {
     if (paymentData?.transactionId && paymentStatus === PaymentStatus.INITIATED) {
       const startTime = Date.now();
-      const timeoutDuration = 2 * 60 * 1000;
+      const timeoutDuration = 15 * 60 * 1000; // 15 minutes timeout
 
       const pollPaymentStatus = async () => {
-        const result = await dispatch(checkPaymentStatus(paymentData.transactionId));
-        if (checkPaymentStatus.fulfilled.match(result)) {
-          if (result.payload.state === PaymentStatus.COMPLETED) {
-            return;
-          }
+        const state = await handlePaymentStatus(paymentData.transactionId);
+        if (state === PaymentStatus.COMPLETED || state === PaymentStatus.FAILED) return;
 
-          if (Date.now() - startTime >= timeoutDuration) {
-            dispatch(resetPayment());
-            setShowTimeoutDialog(true);
-            return;
-          }
-
-          setTimeout(pollPaymentStatus, 5000); // Check every 5 seconds
+        if (Date.now() - startTime >= timeoutDuration) {
+          dispatch(resetPayment());
+          setShowTimeoutDialog(true);
+          return;
         }
+
+        // Implement the recommended polling interval
+        const timePassed = Date.now() - startTime;
+        let nextInterval;
+        if (timePassed < 50000) { // First 50 seconds
+          nextInterval = 3000;
+        } else if (timePassed < 110000) { // Next 60 seconds
+          nextInterval = 6000;
+        } else if (timePassed < 170000) { // Next 60 seconds
+          nextInterval = 10000;
+        } else if (timePassed < 230000) { // Next 60 seconds
+          nextInterval = 30000;
+        } else { // Remaining time
+          nextInterval = 60000;
+        }
+
+        setTimeout(pollPaymentStatus, nextInterval);
       };
 
-      pollPaymentStatus();
+      // Initial check after 20-25 seconds
+      setTimeout(pollPaymentStatus, 22000);
     }
-  }, [dispatch, paymentData, paymentStatus]);
+  }, [dispatch, paymentData, paymentStatus, handlePaymentStatus]);
 
   const renderPaymentStatus = () => {
     if (!paymentData) return null;

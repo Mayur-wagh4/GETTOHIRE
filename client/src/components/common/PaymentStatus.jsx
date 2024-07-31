@@ -5,11 +5,14 @@ function PaymentStatus() {
   const [status, setStatus] = useState('checking');
   const { transactionId } = useParams();
 
+const BASE_URL = import.meta.env.VITE_API_URL;
+
+
   useEffect(() => {
     const checkPaymentStatus = async () => {
       try {
         setStatus('checking');
-        const response = await fetch(`http://localhost:3000/api-v1/candidates/check-payment-status/${transactionId}`);
+        const response = await fetch(`${BASE_URL}/candidates/check-payment-status/${transactionId}`);
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }

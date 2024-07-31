@@ -2,11 +2,28 @@ import axios from "axios";
 import crypto from "crypto";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import NodeCache from 'node-cache';
+import { createLogger, format, transports } from 'winston';
 import Jobs from "../models/jobsModel.js";
 import Transactions from "../models/transactionModel.js";
 import Users from "../models/userModel.js";
 
 dotenv.config();
+
+const logger = createLogger({
+  level: 'info',
+  format: format.combine(
+    format.timestamp(),
+    format.json()
+  ),
+  transports: [
+    new transports.Console(),
+    new transports.File({ filename: 'error.log', level: 'error' }),
+    new transports.File({ filename: 'combined.log' })
+  ]
+});
+
+const cache = new NodeCache({ stdTTL: 600 }); // 10 minutes cache
 
 const {
   MERCHANT_ID,
@@ -23,12 +40,20 @@ const saltIndex = "1";
 
 const createChecksum = (payload, endpoint) => {
   const string = payload + endpoint + SALT_KEY;
-  const sha256 = crypto.createHash("sha256").update(string).digest("hex");
-  return `${sha256}###${saltIndex}`;
+  return `${crypto.createHash("sha256").update(string).digest("hex")}###${saltIndex}`;
+};
+
+const handleError = (res, error, message) => {
+  logger.error(`${message}: ${error}`);
+  res.status(500).json({
+    success: false,
+    message: "Internal server error. Please try again later.",
+    error: error.message,
+  });
 };
 
 export const initiatePayment = async (req, res) => {
-  console.log("Initiating payment...");
+  logger.info("Initiating payment...");
   try {
     const { userId, name, amount, number } = req.body;
     const transactionId = `T${Date.now()}`;
@@ -76,24 +101,19 @@ export const initiatePayment = async (req, res) => {
 
       res.json({
         success: true,
-        message: "Your payment has been initiated successfully. Please follow the provided link to complete your payment.",
+        message: "Payment initiated successfully.",
         paymentUrl: response.data.data.instrumentResponse.redirectInfo.url,
         transactionId: transactionId,
       });
     } else {
       res.status(400).json({
         success: false,
-        message: "Oops! We encountered an issue while initiating your payment. Please try again.",
+        message: "Payment initiation failed.",
         error: response.data.message,
       });
     }
   } catch (error) {
-    console.error("Error initiating payment:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error. Please try again later.",
-      error: error.message,
-    });
+    handleError(res, error, "Error initiating payment");
   }
 };
 
@@ -102,45 +122,30 @@ export const handlePaymentCallback = async (req, res) => {
     const { merchantTransactionId, transactionId, responseCode } = req.body;
 
     if (!merchantTransactionId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Transaction ID is required." });
+      return res.status(400).json({ success: false, message: "Transaction ID is required." });
     }
 
-    const transaction = await Transactions.findOne({
-      transactionId: merchantTransactionId,
-    });
+    const transaction = await Transactions.findOneAndUpdate(
+      { transactionId: merchantTransactionId },
+      {
+        status: responseCode === "SUCCESS" ? "SUCCESS" : "FAILED",
+        phonepeTransactionId: transactionId,
+        responseCode: responseCode,
+      },
+      { new: true }
+    );
 
     if (!transaction) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Transaction not found." });
+      return res.status(404).json({ success: false, message: "Transaction not found." });
     }
-
-    transaction.status = responseCode === "SUCCESS" ? "SUCCESS" : "FAILED";
-    transaction.phonepeTransactionId = transactionId;
-    transaction.responseCode = responseCode;
-    await transaction.save();
 
     if (transaction.userType === "Users") {
-      await updatePremiumStatus(
-        transaction.userId,
-        transaction.status === "SUCCESS"
-      );
+      await updatePremiumStatus(transaction.userId, transaction.status === "SUCCESS");
     }
 
-    res
-      .status(200)
-      .json({ success: true, message: "Payment callback processed successfully." });
+    res.status(200).json({ success: true, message: "Payment callback processed successfully." });
   } catch (error) {
-    console.error("Error processing payment callback:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Internal Server Error. Please try again later.",
-        error: error.message,
-      });
+    handleError(res, error, "Error processing payment callback");
   }
 };
 
@@ -148,22 +153,13 @@ export const checkPaymentStatus = async (req, res) => {
   try {
     const { transactionId } = req.params;
 
-    const transaction = await Transactions.findOne({ transactionId });
-
-    if (!transaction) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Transaction not found." });
-    }
+    console.log(`Checking payment status for transaction ID: ${transactionId}`);
 
     const url = `${PHONEPE_BASE_URL}/status/${MERCHANT_ID}/${transactionId}`;
-
     const stringToHash = `/pg/v1/status/${MERCHANT_ID}/${transactionId}${SALT_KEY}`;
-    const sha256 = crypto
-      .createHash("sha256")
-      .update(stringToHash)
-      .digest("hex");
-    const xVerify = `${sha256}###${saltIndex}`;
+    const xVerify = `${crypto.createHash("sha256").update(stringToHash).digest("hex")}###${saltIndex}`;
+
+    console.log(`Requesting payment status from PhonePe: ${url}`);
 
     const options = {
       method: "GET",
@@ -178,26 +174,29 @@ export const checkPaymentStatus = async (req, res) => {
 
     const response = await axios.request(options);
 
+    console.log(`Received response from PhonePe:`, response.data);
+
     if (response.data.success) {
       const paymentData = response.data.data;
       const { state } = paymentData;
 
-      transaction.status = state;
-      transaction.responseCode = paymentData.responseCode;
-      await transaction.save();
+      console.log(`Payment state: ${state}`);
 
       let redirectUrl;
+      let user;
       if (state === "COMPLETED") {
-        if (transaction.userType === "Users") {
-          await updatePremiumStatus(transaction.userId, true);
-        }
+        console.log(`Payment completed successfully`);
         redirectUrl = PAYMENT_SUCCESS_URL;
+        user = await Users.findOneAndUpdate(
+          { _id: paymentData.merchantUserId.substring(4) },
+          { isPremium: true },
+          { new: true }
+        );
       } else if (state === "PENDING") {
+        console.log(`Payment is still pending`);
         redirectUrl = PAYMENT_PENDING_URL;
       } else {
-        if (transaction.userType === "Users") {
-          await updatePremiumStatus(transaction.userId, false);
-        }
+        console.log(`Payment failed or in an unexpected state`);
         redirectUrl = PAYMENT_FAILED_URL;
       }
 
@@ -211,11 +210,15 @@ export const checkPaymentStatus = async (req, res) => {
         responseCode: paymentData.responseCode,
         paymentInstrument: paymentData.paymentInstrument,
         redirectUrl: redirectUrl,
+        user: user ? {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          isPremium: user.isPremium
+        } : undefined
       });
     } else {
-      if (transaction.userType === "Users") {
-        await updatePremiumStatus(transaction.userId, false);
-      }
+      console.log(`Failed to fetch payment status from PhonePe`);
       res.json({
         success: false,
         message: "Failed to fetch payment status.",
@@ -224,15 +227,8 @@ export const checkPaymentStatus = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error(
-      "Error checking payment status:",
-      error.response ? error.response.data : error.message
-    );
-    res.status(500).json({
-      success: false,
-      message: "Internal server error. Please try again later.",
-      error: error.response ? error.response.data : error.message,
-    });
+    console.error("Error checking payment status:", error);
+    handleError(res, error, "Error checking payment status");
   }
 };
 
