@@ -14,7 +14,10 @@ export const registerCandidate = createAsyncThunk(
   "candidate/register",
   async (candidateData, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${BASE_URL}/auth/register/candidate`, candidateData);
+      const response = await axios.post(
+        `${BASE_URL}/auth/register/candidate`,
+        candidateData
+      );
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response.data);
@@ -26,7 +29,10 @@ export const loginCandidate = createAsyncThunk(
   "candidate/login",
   async (credentials, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${BASE_URL}/auth/signin/candidate`, credentials);
+      const response = await axios.post(
+        `${BASE_URL}/auth/signin/candidate`,
+        credentials
+      );
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response.data);
@@ -46,7 +52,9 @@ export const fetchCandidateDetails = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message || "An error occurred");
+      return rejectWithValue(
+        error.response?.data?.message || error.message || "An error occurred"
+      );
     }
   }
 );
@@ -63,7 +71,9 @@ export const updateCandidateProfile = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message || "An error occurred");
+      return rejectWithValue(
+        error.response?.data?.message || error.message || "An error occurred"
+      );
     }
   }
 );
@@ -78,10 +88,15 @@ export const fetchAppliedJobs = createAsyncThunk(
         { userId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      return Array.isArray(response.data) ? response.data : 
-             (response.data && Array.isArray(response.data.appliedJobs) ? response.data.appliedJobs : []);
+      return Array.isArray(response.data)
+        ? response.data
+        : response.data && Array.isArray(response.data.appliedJobs)
+        ? response.data.appliedJobs
+        : [];
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message || "An error occurred");
+      return rejectWithValue(
+        error.response?.data?.message || error.message || "An error occurred"
+      );
     }
   }
 );
@@ -93,7 +108,9 @@ export const fetchJobPosts = createAsyncThunk(
       const response = await axios.get(`${BASE_URL}/candidates/find-jobs`);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message || "An error occurred");
+      return rejectWithValue(
+        error.response?.data?.message || error.message || "An error occurred"
+      );
     }
   }
 );
@@ -110,7 +127,9 @@ export const applyJob = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message || "An error occurred");
+      return rejectWithValue(
+        error.response?.data?.message || error.message || "An error occurred"
+      );
     }
   }
 );
@@ -127,41 +146,48 @@ export const initiatePayment = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data || { message: "An error occurred while initiating payment" });
+      return rejectWithValue(
+        error.response?.data || {
+          message: "An error occurred while initiating payment",
+        }
+      );
     }
   }
 );
 
 export const checkPaymentStatus = createAsyncThunk(
   "candidate/checkPaymentStatus",
-  async (transactionId, { getState, rejectWithValue }) => {
+  async (transactionId, { getState, dispatch }) => {
     const token = getAuthToken(getState);
-    try {
-      const response = await axios.get(
-        `${BASE_URL}/candidates/check-payment-status/${transactionId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data || { message: "Failed to check payment status" });
+    const response = await axios.get(
+      `${BASE_URL}/candidates/check-payment-status/${transactionId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (
+      response.data.success &&
+      response.data.state === "COMPLETED" &&
+      response.data.responseCode === "SUCCESS"
+    ) {
+      const userId = getState().candidate.details._id;
+      await dispatch(updatePremiumStatus(userId));
     }
+
+    return response.data;
   }
 );
 
 export const updatePremiumStatus = createAsyncThunk(
   "candidate/updatePremiumStatus",
-  async (userId, { getState, rejectWithValue }) => {
+  async (_, { getState }) => {
     const token = getAuthToken(getState);
-    try {
-      const response = await axios.post(
-        `${BASE_URL}/candidates/update-premium-status`,
-        { userId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data || { message: "Failed to update premium status" });
-    }
+    const userId = getState().candidate.userId;
+    const response = await axios.post(
+      `${BASE_URL}/candidates/update-premium-status`,
+      { userId },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return response.data;
   }
 );
 
@@ -194,6 +220,11 @@ const candidateSlice = createSlice({
       state.paymentData = null;
       state.paymentStatus = null;
       state.paymentError = null;
+    },
+    setPremiumStatus: (state, action) => {
+      if (state.details) {
+        state.details.isPremium = action.payload;
+      }
     },
     logoutCandidate: (state) => {
       Object.assign(state, {
@@ -315,7 +346,9 @@ const candidateSlice = createSlice({
         state.loading = false;
         state.appliedJobs.push(action.payload);
         state.successMessage = action.payload.message;
-        state.jobPosts = state.jobPosts.filter((job) => job._id !== action.payload._id);
+        state.jobPosts = state.jobPosts.filter(
+          (job) => job._id !== action.payload._id
+        );
       })
       .addCase(applyJob.rejected, (state, action) => {
         state.loading = false;
@@ -345,13 +378,10 @@ const candidateSlice = createSlice({
         state.paymentLoading = false;
         state.paymentStatus = action.payload.state;
         state.paymentData = { ...state.paymentData, ...action.payload };
-        if (action.payload.state === "COMPLETED" && state.details) {
-          state.details.isPremium = true;
-        }
+        // Note: We don't update isPremium here anymore, as it's handled by updatePremiumStatus
       })
       .addCase(checkPaymentStatus.rejected, (state, action) => {
         state.paymentLoading = false;
-        state.paymentError = action.payload.message;
       })
 
       // Update Premium Status
@@ -359,11 +389,9 @@ const candidateSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(updatePremiumStatus.fulfilled, (state) => {
+      .addCase(updatePremiumStatus.fulfilled, (state, action) => {
         state.loading = false;
-        if (state.details) {
-          state.details.isPremium = true;
-        }
+        state.details.isPremium = true;
       })
       .addCase(updatePremiumStatus.rejected, (state, action) => {
         state.loading = false;
@@ -372,7 +400,9 @@ const candidateSlice = createSlice({
   },
 });
 
-export const { clearError, resetPayment, logoutCandidate } = candidateSlice.actions;
-export const selectIsPremium = (state) => state.candidate.details?.isPremium || false;
+export const { clearError, resetPayment, logoutCandidate } =
+  candidateSlice.actions;
+export const selectIsPremium = (state) =>
+  state.candidate.details?.isPremium || false;
 
 export default candidateSlice.reducer;

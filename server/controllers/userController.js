@@ -125,12 +125,12 @@ export const handlePaymentCallback = async (req, res) => {
   }
 };
 
+// Simplify the payment status check and premium update
 export const checkPaymentStatus = async (req, res) => {
   try {
     const { transactionId } = req.params;
     const url = `${PHONEPE_BASE_URL}/status/${MERCHANT_ID}/${transactionId}`;
-    const stringToHash = `/pg/v1/status/${MERCHANT_ID}/${transactionId}${SALT_KEY}`;
-    const xVerify = `${crypto.createHash("sha256").update(stringToHash).digest("hex")}###${SALT_INDEX}`;
+    const xVerify = createChecksum(`/pg/v1/status/${MERCHANT_ID}/${transactionId}`, SALT_KEY);
 
     const response = await axios.get(url, {
       headers: {
@@ -141,52 +141,48 @@ export const checkPaymentStatus = async (req, res) => {
       },
     });
 
-    if (response.data.success) {
-      const { state, amount, transactionId: phonepeTransactionId, merchantTransactionId, responseCode, paymentInstrument } = response.data.data;
-      
-      let redirectUrl;
-      let user;
-      
-      switch (state) {
-        case "COMPLETED":
-          redirectUrl = PAYMENT_SUCCESS_URL;
-          user = await Users.findOneAndUpdate(
-            { _id: response.data.data.merchantUserId.substring(4) },
-            { isPremium: true },
-            { new: true, select: '_id name email isPremium' }
-          );
-          break;
-        case "PENDING":
-          redirectUrl = PAYMENT_PENDING_URL;
-          break;
-        default:
-          redirectUrl = PAYMENT_FAILED_URL;
-      }
+    const { success, data } = response.data;
+    const { state, responseCode } = data || {};
 
-      res.json({
-        success: true,
-        message: "Payment status fetched successfully.",
-        transactionId: phonepeTransactionId,
-        merchantTransactionId,
-        amount,
-        state,
-        responseCode,
-        paymentInstrument,
-        redirectUrl,
-        user
-      });
-    } else {
-      res.json({
-        success: false,
-        message: "Failed to fetch payment status.",
-        code: response.data.code,
-        redirectUrl: PAYMENT_FAILED_URL,
-      });
+    if (success && state === "COMPLETED" && responseCode === "SUCCESS") {
+      await updatePremiumStatus(req.user._id, true);
     }
+
+    res.json({
+      success,
+      state,
+      responseCode,
+      redirectUrl: success ? PAYMENT_SUCCESS_URL : PAYMENT_FAILED_URL,
+    });
+
   } catch (error) {
     handleError(res, error, "Error checking payment status");
   }
 };
+
+export const updatePremiumStatus = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await Users.findByIdAndUpdate(
+      userId,
+      { isPremium: true },
+      { new: true, select: '_id name email isPremium' }
+    );
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Premium status updated successfully",
+      user,
+    });
+  } catch (error) {
+    handleError(res, error, "Error updating premium status");
+  }
+};
+
 
 export const updateUser = async (req, res) => {
   const {

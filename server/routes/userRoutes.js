@@ -1,5 +1,5 @@
 import express from "express";
-import { applyJob, checkPaymentStatus, getCandidateAppliedJobs, getJobById, getJobPosts, getUser, handlePaymentCallback, initiatePayment, updateUser } from "../controllers/userController.js";
+import { applyJob, checkPaymentStatus,updatePremiumStatus, getCandidateAppliedJobs, getJobById, getJobPosts, getUser, handlePaymentCallback, initiatePayment, updateUser } from "../controllers/userController.js";
 import userAuth from "../middlewares/authMiddleware.js";
 const router = express.Router();
 
@@ -16,6 +16,9 @@ router.post("/apply-job", userAuth, applyJob);
 router.post("/initiate-payment", initiatePayment);
 router.post("/payment-callback", handlePaymentCallback);
 router.get("/check-payment-status/:transactionId",  checkPaymentStatus);
+router.post("/update-premium-status", updatePremiumStatus);
+
+
 
 
 export default router;
