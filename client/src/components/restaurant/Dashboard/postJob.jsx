@@ -1,4 +1,4 @@
-import { Button, Card, CardBody, CardFooter, CardHeader, Dialog, Input, Option, Select, Typography } from '@material-tailwind/react';
+import { Alert, Button, Card, CardBody, CardFooter, CardHeader, Dialog, DialogBody, DialogFooter, DialogHeader, Input, Option, Select, Spinner, Typography } from '@material-tailwind/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { default as React, useCallback, useEffect, useState } from 'react';
 import { FaGlobeAmericas, FaMapMarkerAlt } from "react-icons/fa";
@@ -9,7 +9,7 @@ import {
   createAbroadJob,
   createJob,
   fetchRestaurantDetails,
-  initiateJobPostPayment
+  initiateJobPostPayment,
 } from '../../../redux/slices/restaurantSlice';
 
 const FIXED_PRICE = 1; // Fixed recruitment cost
@@ -26,19 +26,34 @@ const jobDepartmentOptions = {
 // Options for kitchen cuisines
 const kitchenCuisineOptions = ['Italian', 'Chinese', 'Japanese', 'Indian', 'Mexican', 'Mediterranean', 'Thai', 'Middle Eastern', 'CONTINENTAL', 'TANDOOR', 'Bakery', 'SOUTH INDIAN'];
 
+const PaymentStatus = {
+  INITIATED: "INITIATED",
+  PENDING: "PENDING",
+  COMPLETED: "COMPLETED",
+  FAILED: "FAILED",
+  TIMEOUT: "TIMEOUT",
+};
+
+const AlertColors = {
+  [PaymentStatus.INITIATED]: "blue",
+  [PaymentStatus.PENDING]: "yellow",
+  [PaymentStatus.COMPLETED]: "green",
+  [PaymentStatus.FAILED]: "red",
+  [PaymentStatus.TIMEOUT]: "orange",
+};
+
+const StatusMessages = {
+  [PaymentStatus.INITIATED]: "Payment initiated. Please complete the payment on the opened page.",
+  [PaymentStatus.PENDING]: "Payment is pending. Please wait while we confirm your payment.",
+  [PaymentStatus.COMPLETED]: "Payment successful! You can now post your job.",
+  [PaymentStatus.FAILED]: "Payment failed. Please try again or contact support.",
+  [PaymentStatus.TIMEOUT]: "Payment not completed within the time limit. Please try again.",
+};
+
 const PostJob = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { 
-    details: restaurantDetails, 
-    paymentLoading, 
-    paymentError, 
-    paymentUrl,
-    transactionId,
-    paymentStatus,
-    paymentStatusLoading,
-    paymentStatusError
-  } = useSelector((state) => state.restaurant);
+  const { details: restaurantDetails } = useSelector((state) => state.restaurant);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -56,6 +71,10 @@ const PostJob = () => {
   const [isAbroad, setIsAbroad] = useState(false);
   const [error, setError] = useState('');
   const [isComponentMounted, setIsComponentMounted] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState(null);
+  const [transactionId, setTransactionId] = useState(null);
+  const [showTimeoutDialog, setShowTimeoutDialog] = useState(false);
+  const [pollCount, setPollCount] = useState(0);
 
   useEffect(() => {
     setIsComponentMounted(true);
@@ -102,11 +121,16 @@ const PostJob = () => {
 
     const paymentData = {
       amount: FIXED_PRICE,
+      userId: restaurantDetails._id,
+      name: restaurantDetails.restaurantName,
+      number: restaurantDetails.contact,
     };
 
     try {
       const resultAction = await dispatch(initiateJobPostPayment(paymentData));
       if (initiateJobPostPayment.fulfilled.match(resultAction)) {
+        setTransactionId(resultAction.payload.transactionId);
+        setPaymentStatus(PaymentStatus.INITIATED);
         const paymentWindow = window.open(resultAction.payload.paymentUrl, '_blank', 'width=800,height=600');
         if (paymentWindow) {
           pollPaymentStatus(resultAction.payload.transactionId);
@@ -121,31 +145,55 @@ const PostJob = () => {
       console.error(error);
     }
   }, [dispatch, restaurantDetails, validateForm]);
+
   const pollPaymentStatus = useCallback((transactionId) => {
-    const pollInterval = setInterval(async () => {
+    const startTime = Date.now();
+    const timeoutDuration = 15 * 60 * 1000; // 15 minutes timeout
+
+    const checkStatus = async () => {
       try {
         const resultAction = await dispatch(checkPaymentStatus(transactionId));
-        if (checkPaymentStatus.fulfilled.match(resultAction) && resultAction.payload.success) {
-          clearInterval(pollInterval);
-          setDialogOpen(true);
-          setTimeout(() => {
-            setDialogOpen(false);
+        if (checkPaymentStatus.fulfilled.match(resultAction)) {
+          const newStatus = resultAction.payload.state;
+          setPaymentStatus(newStatus);
+          setPollCount((prevCount) => prevCount + 1);
+
+          if (newStatus === PaymentStatus.COMPLETED) {
             handleJobPosting(transactionId);
-          }, 2000);
+            return;
+          } else if (newStatus === PaymentStatus.FAILED) {
+            return;
+          }
         }
       } catch (error) {
         console.error('Error checking payment status:', error);
       }
-    }, 5000);
 
-    setTimeout(() => {
-      clearInterval(pollInterval);
-      if (paymentStatus !== 'success') {
-        setError('Payment timeout. Please try again.');
-        setDialogOpen(true);
+      if (Date.now() - startTime >= timeoutDuration) {
+        setPaymentStatus(PaymentStatus.TIMEOUT);
+        setShowTimeoutDialog(true);
+        return;
       }
-    }, 300000);
-  }, [dispatch, paymentStatus]);
+
+      const timePassed = Date.now() - startTime;
+      let nextInterval;
+
+      if (pollCount < 5) {
+        nextInterval = 3000; // First 15 seconds: every 3 seconds
+      } else if (pollCount < 15) {
+        nextInterval = 5000; // Next 50 seconds: every 5 seconds
+      } else if (pollCount < 25) {
+        nextInterval = 10000; // Next 100 seconds: every 10 seconds
+      } else {
+        nextInterval = 30000; // Remaining time: every 30 seconds
+      }
+
+      setTimeout(checkStatus, nextInterval);
+    };
+
+    // Initial check after 5 seconds
+    setTimeout(checkStatus, 5000);
+  }, [dispatch, pollCount]);
 
   const handleJobPosting = useCallback(async (transactionId) => {
     if (!validateForm()) return;
@@ -163,12 +211,42 @@ const PostJob = () => {
     e.preventDefault();
     setError('');
 
-    if (paymentStatus !== 'success') {
+    if (paymentStatus !== PaymentStatus.COMPLETED) {
       await handlePayment();
     } else {
-      await handleJobPosting();
+      await handleJobPosting(transactionId);
     }
-  }, [paymentStatus, handlePayment, handleJobPosting]);
+  }, [paymentStatus, handlePayment, handleJobPosting, transactionId]);
+
+  const handleTimeoutDialogClose = () => {
+    setShowTimeoutDialog(false);
+    // dispatch(resetPayment());
+    setPaymentStatus(null);
+    setTransactionId(null);
+  };
+
+  const renderPaymentStatus = () => {
+    if (!paymentStatus) return null;
+
+    const alertColor = AlertColors[paymentStatus] || "gray";
+    const statusMessage = StatusMessages[paymentStatus] || "Unknown payment status. Please contact support.";
+
+    return (
+      <Alert color={alertColor} className="mt-4">
+        {statusMessage}
+        {transactionId && (
+          <Typography variant="small" className="mt-2">
+            Transaction ID: {transactionId}
+          </Typography>
+        )}
+        {[PaymentStatus.INITIATED, PaymentStatus.PENDING].includes(paymentStatus) && (
+          <Typography variant="small" className="mt-2">
+            Checking payment status... (Attempt {pollCount})
+          </Typography>
+        )}
+      </Alert>
+    );
+  };
 
   if (!isComponentMounted) {
     return null; // or a loading indicator
@@ -176,150 +254,150 @@ const PostJob = () => {
 
   return (
     <AnimatePresence>
-    {isComponentMounted && (
-      <motion.div
-        initial={{ opacity: 0, y: -50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="flex flex-col items-center min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 p-4 lg:p-8"
-      >
-        <Card className="w-full max-w-4xl bg-white shadow-2xl rounded-xl overflow-hidden border border-orange-500/20">
-          <CardHeader floated={false} className="h-64 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900">
-            <div className="flex flex-col items-center justify-center h-full text-white">
-              <motion.div
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5 }}
-                className="text-center"
-              >
-                <Typography variant="h3" className="font-bold text-shadow mb-4">
-                  Post a New Job
-                </Typography>
-                <div className="flex justify-center space-x-4">
-                  <Button
-                    color={isAbroad ? "blue-gray" : "red"}
-                    onClick={() => setIsAbroad(false)}
-                    className="flex items-center gap-2"
-                  >
-                    <FaMapMarkerAlt /> India Job
-                  </Button>
-                  <Button
-                    color={isAbroad ? "red" : "blue-gray"}
-                    onClick={() => setIsAbroad(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <FaGlobeAmericas /> Abroad Job
-                  </Button>
-                </div>
-              </motion.div>
-            </div>
-          </CardHeader>
-          <CardBody className="px-6 py-8">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-6"
-              >
-              <Input
-                label="Restaurant Name"
-                name="restaurantName"
-                value={formData.restaurantName}
-                onChange={handleChange}
-                required
-                readOnly
-              />
-              <Select
-                label="Job Department"
-                name="jobDepartment"
-                value={formData.jobDepartment}
-                onChange={(value) => handleSelectChange("jobDepartment", value)}
-                required
-              >
-                {Object.keys(jobDepartmentOptions).map((dept) => (
-                  <Option key={dept} value={dept}>{dept}</Option>
-                ))}
-              </Select>
-              {formData.jobDepartment && (
-                <Select
-                  label="Job Designation"
-                  name="jobDesignation"
-                  value={formData.jobDesignation}
-                  onChange={(value) => handleSelectChange("jobDesignation", value)}
-                  required
+      {isComponentMounted && (
+        <motion.div
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col items-center min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 p-4 lg:p-8"
+        >
+          <Card className="w-full max-w-4xl bg-white shadow-2xl rounded-xl overflow-hidden border border-orange-500/20">
+            <CardHeader floated={false} className="h-64 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900">
+              <div className="flex flex-col items-center justify-center h-full text-white">
+                <motion.div
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                  className="text-center"
                 >
-                  {jobDepartmentOptions[formData.jobDepartment].map((job) => (
-                    <Option key={job} value={job}>{job}</Option>
-                  ))}
-                </Select>
-              )}
-              {formData.jobDepartment === "Kitchen" && (
-                <Select
-                  label="Kitchen Cuisine"
-                  name="kitchenCuisine"
-                  value={formData.cuisine}
-                  onChange={(value) => handleSelectChange("cuisine", value)}
-                  required
+                  <Typography variant="h3" className="font-bold text-shadow mb-4">
+                    Post a New Job
+                  </Typography>
+                  <div className="flex justify-center space-x-4">
+                    <Button
+                      color={isAbroad ? "blue-gray" : "red"}
+                      onClick={() => setIsAbroad(false)}
+                      className="flex items-center gap-2"
+                    >
+                      <FaMapMarkerAlt /> India Job
+                    </Button>
+                    <Button
+                      color={isAbroad ? "red" : "blue-gray"}
+                      onClick={() => setIsAbroad(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <FaGlobeAmericas /> Abroad Job
+                    </Button>
+                  </div>
+                </motion.div>
+              </div>
+            </CardHeader>
+            <CardBody className="px-6 py-8">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-6"
                 >
-                  {kitchenCuisineOptions.map((cuisine) => (
-                    <Option key={cuisine} value={cuisine}>{cuisine}</Option>
-                  ))}
-                </Select>
-              )}
-              <Input
-                label="Number of Requirements"
-                type="number"
-                name="numberOfRequirements"
-                value={formData.numberOfRequirements}
-                onChange={handleChange}
-                required
-              />
-              <Input
-                label="Monthly Salary"
-                type="number"
-                name="salary"
-                value={formData.salary}
-                onChange={handleChange}
-                required
-              />
-              <Input
-                label="Location (City)"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                required
-              />
-              {isAbroad && (
-                <>
                   <Input
-                    label="Accommodation"
-                    name="accommodation"
-                    value={formData.accommodation}
+                    label="Restaurant Name"
+                    name="restaurantName"
+                    value={formData.restaurantName}
+                    onChange={handleChange}
+                    required
+                    readOnly
+                  />
+                  <Select
+                    label="Job Department"
+                    name="jobDepartment"
+                    value={formData.jobDepartment}
+                    onChange={(value) => handleSelectChange("jobDepartment", value)}
+                    required
+                  >
+                    {Object.keys(jobDepartmentOptions).map((dept) => (
+                      <Option key={dept} value={dept}>{dept}</Option>
+                    ))}
+                  </Select>
+                  {formData.jobDepartment && (
+                    <Select
+                      label="Job Designation"
+                      name="jobDesignation"
+                      value={formData.jobDesignation}
+                      onChange={(value) => handleSelectChange("jobDesignation", value)}
+                      required
+                    >
+                      {jobDepartmentOptions[formData.jobDepartment].map((job) => (
+                        <Option key={job} value={job}>{job}</Option>
+                      ))}
+                    </Select>
+                  )}
+                  {formData.jobDepartment === "Kitchen" && (
+                    <Select
+                      label="Kitchen Cuisine"
+                      name="kitchenCuisine"
+                      value={formData.cuisine}
+                      onChange={(value) => handleSelectChange("cuisine", value)}
+                      required
+                    >
+                      {kitchenCuisineOptions.map((cuisine) => (
+                        <Option key={cuisine} value={cuisine}>{cuisine}</Option>
+                      ))}
+                    </Select>
+                  )}
+                  <Input
+                    label="Number of Requirements"
+                    type="number"
+                    name="numberOfRequirements"
+                    value={formData.numberOfRequirements}
                     onChange={handleChange}
                     required
                   />
                   <Input
-                    label="Country"
-                    name="country"
-                    value={formData.country}
+                    label="Monthly Salary"
+                    type="number"
+                    name="salary"
+                    value={formData.salary}
                     onChange={handleChange}
                     required
                   />
-                </>
-              )}
-              <Select
-                label="Job Type"
-                name="jobType"
-                value={formData.jobType}
-                onChange={(value) => handleSelectChange("jobType", value)}
-                required
-              >
-                <Option value="full-time">Full-Time</Option>
-                <Option value="part-time">Part-Time</Option>
-              </Select>
-              </motion.div>
-              <div className="mt-6">
+                  <Input
+                    label="Location (City)"
+                    name="location"
+                    value={formData.location}
+                    onChange={handleChange}
+                    required
+                  />
+                  {isAbroad && (
+                    <>
+                      <Input
+                        label="Accommodation"
+                        name="accommodation"
+                        value={formData.accommodation}
+                        onChange={handleChange}
+                        required
+                      />
+                      <Input
+                        label="Country"
+                        name="country"
+                        value={formData.country}
+                        onChange={handleChange}
+                        required
+                      />
+                    </>
+                  )}
+<Select
+                    label="Job Type"
+                    name="jobType"
+                    value={formData.jobType}
+                    onChange={(value) => handleSelectChange("jobType", value)}
+                    required
+                  >
+                    <Option value="full-time">Full-Time</Option>
+                    <Option value="part-time">Part-Time</Option>
+                  </Select>
+                </motion.div>
+                <div className="mt-6">
                   <Typography variant="h6" color="blue-gray" className="font-bold">
                     Fixed Recruitment Cost: ₹{FIXED_PRICE}
                   </Typography>
@@ -331,34 +409,40 @@ const PostJob = () => {
                 size="lg"
                 className="bg-deep-orange-500 text-white"
                 onClick={handleSubmit}
-                disabled={paymentLoading || paymentStatusLoading}
+                disabled={[PaymentStatus.INITIATED, PaymentStatus.PENDING].includes(paymentStatus)}
               >
-                {paymentLoading || paymentStatusLoading ? "Processing..." : 
-                 paymentStatus === 'success' ? "Post Job" :
-                 `Pay ₹${FIXED_PRICE} & Post Job`}
+                {[PaymentStatus.INITIATED, PaymentStatus.PENDING].includes(paymentStatus) ? (
+                  <Spinner size="sm" className="mr-2" />
+                ) : paymentStatus === PaymentStatus.COMPLETED ? (
+                  "Post Job"
+                ) : (
+                  `Pay ₹${FIXED_PRICE} & Post Job`
+                )}
               </Button>
             </CardFooter>
           </Card>
-          {(error || paymentError || paymentStatusError) && (
+          {renderPaymentStatus()}
+          {error && (
             <Typography color="red" className="mt-4 text-center">
-              {error || paymentError || paymentStatusError}
+              {error}
             </Typography>
           )}
           <Dialog 
-            open={dialogOpen} 
-            handler={() => setDialogOpen(false)}
+            open={showTimeoutDialog} 
+            handler={handleTimeoutDialogClose}
             className="bg-white rounded-xl overflow-hidden shadow-2xl"
           >
-            <div className="p-6">
-              <Typography variant="h5" color={paymentStatus === 'success' ? 'green' : 'red'} className="mb-2 font-bold">
-                {paymentStatus === 'success' ? 'Payment Successful' : 'Payment Failed'}
-              </Typography>
-              <Typography color="blue-gray">
-                {paymentStatus === 'success' 
-                  ? 'Your payment was successful. Posting your job now...' 
-                  : 'Your payment failed. Please try again.'}
-              </Typography>
-            </div>
+            <DialogHeader className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white">
+              Payment Time Limit Exceeded
+            </DialogHeader>
+            <DialogBody className="bg-gray-200 text-gray-800">
+              The payment was not completed within the time limit. Please try again.
+            </DialogBody>
+            <DialogFooter className="bg-gray-200">
+              <Button variant="gradient" color="deep-orange" onClick={handleTimeoutDialogClose}>
+                <span>OK</span>
+              </Button>
+            </DialogFooter>
           </Dialog>
         </motion.div>
       )}

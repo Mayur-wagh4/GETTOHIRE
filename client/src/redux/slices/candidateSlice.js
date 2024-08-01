@@ -169,8 +169,7 @@ export const checkPaymentStatus = createAsyncThunk(
       response.data.state === "COMPLETED" &&
       response.data.responseCode === "SUCCESS"
     ) {
-      const userId = getState().candidate.details._id;
-      await dispatch(updatePremiumStatus(userId));
+      await dispatch(updatePremiumStatus());
     }
 
     return response.data;
@@ -182,8 +181,9 @@ export const updatePremiumStatus = createAsyncThunk(
   async (_, { getState }) => {
     const token = getAuthToken(getState);
     const userId = getState().candidate.userId;
+    console.log(userId)
     const response = await axios.post(
-      `${BASE_URL}/candidates/update-premium-status`,
+      `${BASE_URL}/candidates/update-premium-status/${userId}`,
       { userId },
       { headers: { Authorization: `Bearer ${token}` } }
     );

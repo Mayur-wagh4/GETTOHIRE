@@ -14,6 +14,7 @@ import {
   checkPaymentStatus,
   initiatePayment,
   resetPayment,
+  updatePremiumStatus,
 } from "../../redux/slices/candidateSlice";
 
 const PaymentStatus = {
@@ -44,6 +45,7 @@ const Payment = () => {
   const dispatch = useDispatch();
   const { details, paymentData, paymentStatus, paymentLoading, paymentError } = useSelector((state) => state.candidate);
   const [showTimeoutDialog, setShowTimeoutDialog] = useState(false);
+  const [pollCount, setPollCount] = useState(0);
 
   const handlePayment = useCallback(async (e) => {
     e.preventDefault();
@@ -64,6 +66,9 @@ const Payment = () => {
   const handlePaymentStatus = useCallback(async (transactionId) => {
     const result = await dispatch(checkPaymentStatus(transactionId));
     if (checkPaymentStatus.fulfilled.match(result)) {
+      if (result.payload.state === PaymentStatus.COMPLETED && result.payload.responseCode === "SUCCESS") {
+        dispatch(updatePremiumStatus());
+      }
       return result.payload.state;
     }
     return null;
@@ -76,7 +81,11 @@ const Payment = () => {
 
       const pollPaymentStatus = async () => {
         const state = await handlePaymentStatus(paymentData.transactionId);
-        if (state === PaymentStatus.COMPLETED || state === PaymentStatus.FAILED) return;
+        setPollCount((prevCount) => prevCount + 1);
+
+        if (state === PaymentStatus.COMPLETED || state === PaymentStatus.FAILED) {
+          return;
+        }
 
         if (Date.now() - startTime >= timeoutDuration) {
           dispatch(resetPayment());
@@ -84,37 +93,32 @@ const Payment = () => {
           return;
         }
 
-        // Implement the recommended polling interval
         const timePassed = Date.now() - startTime;
         let nextInterval;
-        if (timePassed < 50000) { // First 50 seconds
-          nextInterval = 3000;
-        } else if (timePassed < 110000) { // Next 60 seconds
-          nextInterval = 6000;
-        } else if (timePassed < 170000) { // Next 60 seconds
-          nextInterval = 10000;
-        } else if (timePassed < 230000) { // Next 60 seconds
-          nextInterval = 30000;
-        } else { // Remaining time
-          nextInterval = 60000;
+
+        if (pollCount < 5) {
+          nextInterval = 3000; // First 15 seconds: every 3 seconds
+        } else if (pollCount < 15) {
+          nextInterval = 5000; // Next 50 seconds: every 5 seconds
+        } else if (pollCount < 25) {
+          nextInterval = 10000; // Next 100 seconds: every 10 seconds
+        } else {
+          nextInterval = 30000; // Remaining time: every 30 seconds
         }
 
         setTimeout(pollPaymentStatus, nextInterval);
       };
 
-      // Initial check after 20-25 seconds
-      setTimeout(pollPaymentStatus, 22000);
+      // Initial check after 5 seconds
+      setTimeout(pollPaymentStatus, 5000);
     }
-  }, [dispatch, paymentData, paymentStatus, handlePaymentStatus]);
+  }, [dispatch, paymentData, paymentStatus, handlePaymentStatus, pollCount]);
 
   const renderPaymentStatus = () => {
     if (!paymentData) return null;
 
     const alertColor = AlertColors[paymentStatus] || "gray";
-    const statusMessage =
-      StatusMessages[paymentStatus] ||
-      paymentError ||
-      "Unknown payment status. Please contact support.";
+    const statusMessage = StatusMessages[paymentStatus] || paymentError || "Unknown payment status. Please contact support.";
 
     return (
       <>
@@ -126,19 +130,16 @@ const Payment = () => {
             Transaction ID: {paymentData.transactionId}
           </Typography>
         )}
-        {[PaymentStatus.INITIATED, PaymentStatus.PENDING].includes(
-          paymentStatus
-        ) && (
+        {[PaymentStatus.INITIATED, PaymentStatus.PENDING].includes(paymentStatus) && (
           <Typography variant="small" className="mt-2">
-            Checking payment status...
+            Checking payment status... (Attempt {pollCount})
           </Typography>
         )}
       </>
     );
   };
 
-  const showPaymentForm =
-    !paymentData || [PaymentStatus.FAILED, PaymentStatus.TIMEOUT].includes(paymentStatus);
+  const showPaymentForm = !paymentData || [PaymentStatus.FAILED, PaymentStatus.TIMEOUT].includes(paymentStatus);
 
   const handleTimeoutDialogClose = () => {
     setShowTimeoutDialog(false);
@@ -198,7 +199,7 @@ const Payment = () => {
           Payment Time Limit Exceeded
         </DialogHeader>
         <DialogBody className="bg-gray-200 text-gray-800">
-          The payment was not completed within the 2-minute time limit. Please try again.
+          The payment was not completed within the time limit. Please try again.
         </DialogBody>
         <DialogFooter className="bg-gray-200">
           <Button variant="gradient" color="deep-orange" onClick={handleTimeoutDialogClose}>

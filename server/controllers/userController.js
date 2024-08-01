@@ -147,21 +147,9 @@ export const checkPaymentStatus = async (req, res) => {
     const { state, responseCode, amount, transactionId: phonepeTransactionId, merchantTransactionId } = data || {};
 
     let redirectUrl = PAYMENT_FAILED_URL;
-    let user = null;
 
     if (success && state === "COMPLETED" && responseCode === "SUCCESS") {
       redirectUrl = PAYMENT_SUCCESS_URL;
-
-      // Update user to premium if needed
-      try {
-        user = await Users.findOneAndUpdate(
-          { _id: req.user._id },
-          { isPremium: true },
-          { new: true, select: '_id name email isPremium' }
-        );
-      } catch (updateError) {
-        console.error("Error updating user to premium:", updateError);
-      }
     } else if (state === "PENDING") {
       redirectUrl = PAYMENT_PENDING_URL;
     }
@@ -175,7 +163,6 @@ export const checkPaymentStatus = async (req, res) => {
       transactionId: phonepeTransactionId,
       merchantTransactionId,
       redirectUrl,
-      user: user || undefined,
     });
 
   } catch (error) {
@@ -183,10 +170,13 @@ export const checkPaymentStatus = async (req, res) => {
     res.status(500).json({ success: false, message: "Error checking payment status" });
   }
 };
-
 export const updatePremiumStatus = async (req, res) => {
   try {
-    const userId = req.user._id;
+    // Get userId from the request body instead of req.user
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "User ID is required" });
+    }
     const user = await Users.findByIdAndUpdate(
       userId,
       { isPremium: true },
@@ -206,7 +196,6 @@ export const updatePremiumStatus = async (req, res) => {
     handleError(res, error, "Error updating premium status");
   }
 };
-
 
 export const updateUser = async (req, res) => {
   const {
