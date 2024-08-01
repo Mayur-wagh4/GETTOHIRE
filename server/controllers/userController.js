@@ -130,8 +130,10 @@ export const checkPaymentStatus = async (req, res) => {
   try {
     const { transactionId } = req.params;
     const url = `${PHONEPE_BASE_URL}/status/${MERCHANT_ID}/${transactionId}`;
-    const xVerify = createChecksum(`/pg/v1/status/${MERCHANT_ID}/${transactionId}`, SALT_KEY);
+    const stringToHash = `/pg/v1/status/${MERCHANT_ID}/${transactionId}${SALT_KEY}`;
+    const xVerify = `${crypto.createHash("sha256").update(stringToHash).digest("hex")}###${SALT_INDEX}`;
 
+    // Fetch payment status
     const response = await axios.get(url, {
       headers: {
         accept: "application/json",
@@ -141,22 +143,44 @@ export const checkPaymentStatus = async (req, res) => {
       },
     });
 
-    const { success, data } = response.data;
-    const { state, responseCode } = data || {};
+    const { success, code, data } = response.data;
+    const { state, responseCode, amount, transactionId: phonepeTransactionId, merchantTransactionId } = data || {};
+
+    let redirectUrl = PAYMENT_FAILED_URL;
+    let user = null;
 
     if (success && state === "COMPLETED" && responseCode === "SUCCESS") {
-      await updatePremiumStatus(req.user._id, true);
+      redirectUrl = PAYMENT_SUCCESS_URL;
+
+      // Update user to premium if needed
+      try {
+        user = await Users.findOneAndUpdate(
+          { _id: req.user._id },
+          { isPremium: true },
+          { new: true, select: '_id name email isPremium' }
+        );
+      } catch (updateError) {
+        console.error("Error updating user to premium:", updateError);
+      }
+    } else if (state === "PENDING") {
+      redirectUrl = PAYMENT_PENDING_URL;
     }
 
     res.json({
       success,
+      message: success ? "Payment status fetched successfully." : "Failed to fetch payment status.",
       state,
       responseCode,
-      redirectUrl: success ? PAYMENT_SUCCESS_URL : PAYMENT_FAILED_URL,
+      amount,
+      transactionId: phonepeTransactionId,
+      merchantTransactionId,
+      redirectUrl,
+      user: user || undefined,
     });
 
   } catch (error) {
-    handleError(res, error, "Error checking payment status");
+    console.error("Error checking payment status:", error);
+    res.status(500).json({ success: false, message: "Error checking payment status" });
   }
 };
 
