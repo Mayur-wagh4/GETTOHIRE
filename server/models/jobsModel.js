@@ -6,49 +6,33 @@ const jobSchema = new mongoose.Schema(
     jobDesignation: { type: String, required: true },
     salary: { type: Number, required: true },
     location: { type: String, required: true },
-    accommodation: { type: String  },
-    jobType: { type: String, enum: ['full-time', 'part-time'], required: true },
-    jobDepartment: { type: String, required: true }, // New field for job department
-    kitchenCuisine: { type: String }, // New field for kitchen cuisine
-    cuisine: {
-      type: String,
-      enum: [
-        'Italian',
-        'Chinese',
-        'Japanese',
-        'Indian',
-        'Mexican',
-        'Mediterranean',
-        'Thai',
-        'Middle Eastern',
-        'Continental',
-        'Tandoor',
-        'South Indian',
-      ],
-      required: function() {
-        return this.jobDepartment === 'Kitchen';
-      },
-    },
-    country: { type: String, required: true },
+    accommodation: { type: String, required: false },
+    jobType: { type: String, enum: ['full-time', 'part-time'], required: false },
+    jobDepartment: { type: String, required: false }, 
+    kitchenCuisine: { type: String, required: false }, 
+    cuisine: { type: String, required: false },
+
+    country: { type: String, required: false },
     applicants: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Users'
+      ref: 'Users',
+      required: false
     }],
     restaurant: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: 'Restaurant',
-},
-transaction: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: 'Transactions'
-},
-
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Restaurant',
+      required: false
+    },
+    transaction: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Transactions',
+      required: false
+    },
   },
   { timestamps: true }
 );
 
 jobSchema.pre('save', function (next) {
-
   this.recruitmentCost = this.salary * 0.05;
   next();
 });

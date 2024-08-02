@@ -145,6 +145,9 @@ const Payment = () => {
     setShowTimeoutDialog(false);
     dispatch(resetPayment());
   };
+  useEffect(() => {
+    dispatch(resetPayment());
+  }, [dispatch]);
 
   return (
     <div className="p-6 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-lg shadow-lg">

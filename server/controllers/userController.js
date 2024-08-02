@@ -129,6 +129,19 @@ export const handlePaymentCallback = async (req, res) => {
 export const checkPaymentStatus = async (req, res) => {
   try {
     const { transactionId } = req.params;
+    const { userId } = req.query; // Get userId from query parameters
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "User ID is required" });
+    }
+
+    // First, verify that the transaction belongs to the current user
+    const transaction = await Transactions.findOne({ transactionId, userId });
+
+    if (!transaction) {
+      return res.status(404).json({ success: false, message: "Transaction not found or does not belong to the current user" });
+    }
+
     const url = `${PHONEPE_BASE_URL}/status/${MERCHANT_ID}/${transactionId}`;
     const stringToHash = `/pg/v1/status/${MERCHANT_ID}/${transactionId}${SALT_KEY}`;
     const xVerify = `${crypto.createHash("sha256").update(stringToHash).digest("hex")}###${SALT_INDEX}`;
@@ -150,8 +163,23 @@ export const checkPaymentStatus = async (req, res) => {
 
     if (success && state === "COMPLETED" && responseCode === "SUCCESS") {
       redirectUrl = PAYMENT_SUCCESS_URL;
+      
+      // Update transaction status in the database
+      transaction.status = "SUCCESS";
+      transaction.phonepeTransactionId = phonepeTransactionId;
+      transaction.responseCode = responseCode;
+      await transaction.save();
+
+      // Update user's premium status
+      await Users.findByIdAndUpdate(userId, { isPremium: true });
     } else if (state === "PENDING") {
       redirectUrl = PAYMENT_PENDING_URL;
+    } else {
+      // Update transaction status for failed payments
+      transaction.status = "FAILED";
+      transaction.phonepeTransactionId = phonepeTransactionId;
+      transaction.responseCode = responseCode;
+      await transaction.save();
     }
 
     res.json({
@@ -170,6 +198,8 @@ export const checkPaymentStatus = async (req, res) => {
     res.status(500).json({ success: false, message: "Error checking payment status" });
   }
 };
+
+
 export const updatePremiumStatus = async (req, res) => {
   try {
     // Get userId from the request body instead of req.user

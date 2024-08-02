@@ -159,10 +159,15 @@ export const checkPaymentStatus = createAsyncThunk(
   "candidate/checkPaymentStatus",
   async (transactionId, { getState, dispatch }) => {
     const token = getAuthToken(getState);
+    const userId = getState().candidate.userId;
     const response = await axios.get(
       `${BASE_URL}/candidates/check-payment-status/${transactionId}`,
-      { headers: { Authorization: `Bearer ${token}` } }
+      { 
+        headers: { Authorization: `Bearer ${token}` },
+        params: { userId }
+      }
     );
+
 
     if (
       response.data.success &&
@@ -220,6 +225,7 @@ const candidateSlice = createSlice({
       state.paymentData = null;
       state.paymentStatus = null;
       state.paymentError = null;
+      state.paymentLoading = false;
     },
     setPremiumStatus: (state, action) => {
       if (state.details) {
@@ -268,6 +274,11 @@ const candidateSlice = createSlice({
           state.token = action.payload.token;
           state.details = action.payload.user;
           state.userId = action.payload.user._id;
+          // Reset payment state on login
+          state.paymentData = null;
+          state.paymentStatus = null;
+          state.paymentError = null;
+          state.paymentLoading = false;
         } else {
           state.loading = false;
           state.error = "Invalid response from server";

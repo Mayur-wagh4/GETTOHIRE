@@ -164,19 +164,6 @@ export const createJob = async (req, res) => {
       transactionId,
       numberOfRequirements,
     } = req.body;
-
-    if (!transactionId) {
-      return res
-        .status(400)
-        .json({ message: "Payment transaction ID is required" });
-    }
-
-    // Verify payment status
-    const paymentStatus = await checkPaymentStatus(transactionId);
-    if (paymentStatus.state !== "COMPLETED") {
-      return res.status(400).json({ message: "Payment not completed" });
-    }
-
     if (
       !restaurantName ||
       !jobDesignation ||
@@ -270,11 +257,7 @@ export const createAbroadJob = async (req, res) => {
         .json({ message: "Payment transaction ID is required" });
     }
 
-    // Verify payment status
-    const paymentStatus = await checkPaymentStatus(transactionId);
-    if (paymentStatus.state !== "COMPLETED") {
-      return res.status(400).json({ message: "Payment not completed" });
-    }
+
 
     if (
       !restaurantName ||
