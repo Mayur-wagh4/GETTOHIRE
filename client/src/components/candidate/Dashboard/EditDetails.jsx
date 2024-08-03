@@ -111,7 +111,7 @@ const EditDetails = () => {
               {newDetails.name || 'N/A'}
             </Typography>
             <Typography className="font-medium text-deep-orange-500 mb-6 text-lg">
-              {newDetails.position || 'N/A'} at {newDetails.department || 'N/A'}
+              {newDetails.position || 'N/A'} 
             </Typography>
           </motion.div>
           <motion.div

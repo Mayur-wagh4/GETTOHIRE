@@ -91,7 +91,7 @@ export function SidebarWithBurgerMenu({ isOpen, onClose, restaurantName }) {
                   <Typography variant="h4" className="font-bold text-3xl mb-2">
                     Dashboard
                   </Typography>
-                  <Typography variant="medium" className="hidden md:block">
+                  <Typography variant="h4" className="hidden md:block">
                     <span className="text-white">Welcome,</span>{' '}
                     <span className="text-deep-orange-500">{details.restaurantName}</span>
                   </Typography>

@@ -80,7 +80,7 @@ function AppliedJobs() {
                       <InfoItem label="Department" value={job.jobDepartment} />
                       <InfoItem label="Job Type" value={job.jobType} />
                       <InfoItem label="Cuisine" value={job.kitchenCuisine} />
-                      <InfoItem label="Salary" value={`₹${job.salary.toLocaleString()}`} />
+                      <InfoItem label="Salary" value={job.salary} />
                     </div>
                     <div>
                       <InfoItem label="Location" value={job.location} />

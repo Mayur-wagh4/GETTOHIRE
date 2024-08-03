@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { checkPaymentStatus, createAbroadJob, createJob, fetchRestaurantDetails, initiateJobPostPayment } from '../../../redux/slices/restaurantSlice';
 
-const FIXED_PRICE = 1;
+const FIXED_PRICE = 799;
 const API_BASE_URL = "http://localhost:3000/api-v1/restaurants";
 
 const jobDepartmentOptions = {
@@ -217,7 +217,7 @@ const PostJob = () => {
         )}
         {[PaymentStatus.INITIATED, PaymentStatus.PENDING].includes(paymentStatus) && (
           <Typography variant="small" className="mt-2">
-            Checking payment status... (Attempt {pollCount})
+           Don't Close this Page, Checking payment status... (Attempt {pollCount})
           </Typography>
         )}
       </Alert>

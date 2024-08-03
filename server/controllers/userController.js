@@ -45,8 +45,8 @@ export const initiatePayment = async (req, res) => {
       merchantTransactionId: transactionId,
       merchantUserId: `MUID${userId}`,
       amount: amount * 100,
-      redirectUrl: `${PAYMENT_REDIRECT_URL}${transactionId}`,
-      redirectMode: "GET",
+      // redirectUrl: `${PAYMENT_REDIRECT_URL}${transactionId}`,
+      // redirectMode: "GET",
       callbackUrl: PAYMENT_CALLBACK_URL,
       mobileNumber: number,
       paymentInstrument: { type: "PAY_PAGE" },
@@ -97,10 +97,12 @@ export const handlePaymentCallback = async (req, res) => {
   try {
     const { merchantTransactionId, transactionId, responseCode } = req.body;
 
-    if (!merchantTransactionId) {
-      return res.status(400).json({ success: false, message: "Transaction ID is required." });
+    // Validate required fields
+    if (!merchantTransactionId || !transactionId || !responseCode) {
+      return res.status(400).json({ success: false, message: "Transaction ID, PhonePe transaction ID, and response code are required." });
     }
 
+    // Find and update the transaction in the database
     const transaction = await Transactions.findOneAndUpdate(
       { transactionId: merchantTransactionId },
       {
@@ -111,19 +113,28 @@ export const handlePaymentCallback = async (req, res) => {
       { new: true }
     );
 
+    // Check if the transaction was found and updated
     if (!transaction) {
       return res.status(404).json({ success: false, message: "Transaction not found." });
     }
 
+    // Update the user's premium status if the transaction was successful
     if (transaction.userType === "Users" && transaction.status === "SUCCESS") {
       await Users.findByIdAndUpdate(transaction.userId, { isPremium: true });
     }
 
+    // Log success
+    console.log(`Payment callback processed successfully for transaction ID: ${merchantTransactionId}`);
+
+    // Respond with success message
     res.status(200).json({ success: true, message: "Payment callback processed successfully." });
   } catch (error) {
-    handleError(res, error, "Error processing payment callback");
+    // Handle and log errors
+    console.error("Error processing payment callback:", error);
+    res.status(500).json({ success: false, message: "Error processing payment callback" });
   }
 };
+
 
 // Simplify the payment status check and premium update
 export const checkPaymentStatus = async (req, res) => {
@@ -159,10 +170,10 @@ export const checkPaymentStatus = async (req, res) => {
     const { success, code, data } = response.data;
     const { state, responseCode, amount, transactionId: phonepeTransactionId, merchantTransactionId } = data || {};
 
-    let redirectUrl = PAYMENT_FAILED_URL;
+    // let redirectUrl = PAYMENT_FAILED_URL;
 
     if (success && state === "COMPLETED" && responseCode === "SUCCESS") {
-      redirectUrl = PAYMENT_SUCCESS_URL;
+      // redirectUrl = PAYMENT_SUCCESS_URL;
       
       // Update transaction status in the database
       transaction.status = "SUCCESS";
@@ -173,7 +184,7 @@ export const checkPaymentStatus = async (req, res) => {
       // Update user's premium status
       await Users.findByIdAndUpdate(userId, { isPremium: true });
     } else if (state === "PENDING") {
-      redirectUrl = PAYMENT_PENDING_URL;
+      // redirectUrl = PAYMENT_PENDING_URL;
     } else {
       // Update transaction status for failed payments
       transaction.status = "FAILED";
@@ -190,7 +201,7 @@ export const checkPaymentStatus = async (req, res) => {
       amount,
       transactionId: phonepeTransactionId,
       merchantTransactionId,
-      redirectUrl,
+      // redirectUrl,
     });
 
   } catch (error) {

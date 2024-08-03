@@ -12,23 +12,23 @@ const PricingSection = () => {
         <div className="flex flex-wrap justify-center gap-8">
           <PricingCard 
             title="For Candidates"
-            price="99"
+            price="1499"
             features={[
               "Access to all job listings",
-              "Personalized job alerts",
-              "Resume building tools",
-              "Direct application to employers"
+              "50 available countries",
+              "Get full support before and after joining ",
+              "Trouble free document verification"
             ]}
             link="/candidate-register"
           />
           <PricingCard 
             title="For Restaurants"
-            price="1999"
+            price="799"
             features={[
-              "Unlimited job postings",
-              "Access to candidate database",
-              "Advanced filtering options",
-              "Dedicated account manager"
+              "Verified candidates across all departments",
+              "security from financial fraud",
+              "Affordable and hassle free hiring process",
+              "Get directly connected with candidates "
             ]}
             link="/restaurant-register"
             featured={true}

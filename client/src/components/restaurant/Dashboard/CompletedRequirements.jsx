@@ -90,7 +90,6 @@ function RestaurantCard({ details }) {
 }
 
 
-
 function PostedJobsCardList({ jobPosts }) {
   return (
     <Card className="w-full max-w-4xl bg-white shadow-2xl rounded-xl overflow-hidden border border-orange-500/20 mt-8">
@@ -142,6 +141,40 @@ function JobCard({ job }) {
           <InfoItem label="Department" value={job.jobDepartment} />
           <InfoItem label="Accommodation" value={job.accommodation} />
           <InfoItem label="Country" value={job.country} />
+        </div>
+        <Typography variant="h6" color="blue-gray" className="font-bold mt-6 mb-3">
+          Candidates
+        </Typography>
+        {job.candidates && job.candidates.length > 0 ? (
+          <div className="space-y-4">
+            {job.candidates.map((candidate, index) => (
+              <CandidateCard key={index} candidate={candidate} />
+            ))}
+          </div>
+        ) : (
+          <Typography color="blue-gray" className="text-center">
+            No candidates applied yet.
+          </Typography>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+function CandidateCard({ candidate }) {
+  return (
+    <Card className="w-full bg-gray-50 shadow-sm border border-gray-200 rounded-lg">
+      <CardBody className="p-4">
+        <Typography variant="h6" color="blue-gray" className="font-bold mb-2">
+          {candidate.name}
+        </Typography>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <InfoItem label="Email" value={candidate.email} />
+          <InfoItem label="Contact" value={candidate.contact} />
+          <InfoItem label="Location" value={candidate.location} />
+          <InfoItem label="Department" value={candidate.department} />
+          <InfoItem label="Position" value={candidate.position} />
+          <InfoItem label="Current Salary" value={candidate.currentSalary} />
         </div>
       </CardBody>
     </Card>

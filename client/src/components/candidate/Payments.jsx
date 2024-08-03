@@ -54,7 +54,7 @@ const Payment = () => {
       initiatePayment({
         userId: details._id,
         name: details.name,
-        amount: 1,
+        amount: 1499,
         number: details.contact,
       })
     );
@@ -132,7 +132,7 @@ const Payment = () => {
         )}
         {[PaymentStatus.INITIATED, PaymentStatus.PENDING].includes(paymentStatus) && (
           <Typography variant="small" className="mt-2">
-            Checking payment status... (Attempt {pollCount})
+           Dont Close the Page  Checking payment status... (Attempt {pollCount})
           </Typography>
         )}
       </>
@@ -166,7 +166,7 @@ const Payment = () => {
           ))}
           <div className="mb-4">
             <Typography variant="h6" className="text-white">
-              <strong>Amount:</strong> 1 Rs
+              <strong>Amount:</strong> Rs-1499.00 Rs
             </Typography>
           </div>
           <div className="flex justify-center">

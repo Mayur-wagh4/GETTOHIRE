@@ -76,7 +76,7 @@ function CandidateProfile() {
               {name || 'N/A'}
             </Typography>
             <Typography  className="font-medium text-deep-orange-500 mb-6 text-lg">
-              {position || 'N/A'} at {department || 'N/A'}
+              {position || 'N/A'} 
             </Typography>
           </motion.div>
           <motion.div

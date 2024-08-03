@@ -237,7 +237,7 @@ export function SidebarWithBurgerMenu({ Navopen, onClose }) {
           <div className="mt-8 bg-white p-6 rounded-xl shadow-md border border-gray-200">
             <Typography variant="h3" color="blue-gray" className="font-bold flex items-center">
               <CurrencyRupeeIcon className="h-8 w-8 mr-2 text-deep-orange-500" />
-              1
+              1499/-
             </Typography>
             <Typography color="blue-gray" className="mt-1 font-normal">
               One-time payment for unlimited access

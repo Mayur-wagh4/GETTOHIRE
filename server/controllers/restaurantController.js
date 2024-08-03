@@ -33,9 +33,9 @@ const initiatePayment = async (paymentData) => {
     merchantTransactionId: transactionId,
     merchantUserId: `MUID${userId}`,
     amount: amount * 100,
-    redirectUrl: `${PAYMENT_REDIRECT_URL}${transactionId}`,
-    redirectMode: "GET",
-    callbackUrl: PAYMENT_CALLBACK_URL_2,
+    // redirectUrl: `${PAYMENT_REDIRECT_URL}${transactionId}`,
+    // redirectMode: "GET",
+    // callbackUrl: PAYMENT_CALLBACK_URL_2,
     mobileNumber: number,
     paymentInstrument: {
       type: "PAY_PAGE",
@@ -387,28 +387,51 @@ export const getRestaurantProfile = async (req, res, next) => {
 
 export const getRestaurantPostedJobs = async (req, res, next) => {
   try {
-    const { restaurantId } = req.query;
+    console.log("Fetching restaurant jobs...");
+    console.log("Restaurant ID from auth:", req.restaurant?._id);
 
-    if (!mongoose.Types.ObjectId.isValid(restaurantId)) {
+    const restaurantId = req.restaurant?._id;
+
+    if (!restaurantId || !mongoose.Types.ObjectId.isValid(restaurantId)) {
+      console.log("Invalid restaurant ID:", restaurantId);
       return res
-        .status(404)
+        .status(400)
         .json({ message: `Invalid Restaurant ID: ${restaurantId}` });
     }
+    
 
-    const restaurant = await Restaurant.findById(restaurantId).populate(
-      "jobPosts"
-    );
+    console.log("Finding restaurant with ID:", restaurantId);
+    const restaurant = await Restaurant.findById(restaurantId).populate({
+      path: 'jobPosts',
+      populate: {
+        path: 'applicants',
+        model: 'Users',
+        select: 'name email contact location department position currentSalary'
+      }
+    });
 
     if (!restaurant) {
+      console.log("Restaurant not found with ID:", restaurantId);
       return res
         .status(404)
         .json({ message: `Restaurant not found with ID: ${restaurantId}` });
     }
 
-    res.status(200).json(restaurant.jobPosts);
+    console.log("Restaurant found, job posts count:", restaurant.jobPosts.length);
+
+    const jobsWithCandidates = restaurant.jobPosts.map(job => ({
+      ...job.toObject(),
+      candidates: job.applicants
+    }));
+    if (!restaurant.jobPosts || restaurant.jobPosts.length === 0) {
+      return res.status(200).json([]);
+    }
+    console.log("Sending response with jobs and candidates");
+    res.status(200).json(jobsWithCandidates);
+    
   } catch (error) {
-    console.error("Error fetching restaurant posted jobs:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    console.error("Error in getRestaurantPostedJobs:", error);
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
 

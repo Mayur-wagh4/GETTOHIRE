@@ -100,46 +100,37 @@ export const updateRestaurantProfile = createAsyncThunk(
     }
   }
 );
-
 export const fetchRestaurantJobListings = createAsyncThunk(
   "restaurant/fetchJobListings",
-  async ({ restaurantId }, { getState, rejectWithValue }) => {
+  async (_, { getState, rejectWithValue }) => {
     const state = getState().restaurant;
     if (state.jobPostsFetched) {
-      // If we've already fetched job posts, return the existing data
       return state.jobPosts;
     }
 
     const token = getAuthToken(getState);
 
     try {
+     
       const response = await axios.get(
         `${BASE_URL}/restaurants/get-restaurant-jobs`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-          params: { restaurantId },
         }
       );
-
-      if (Array.isArray(response.data)) {
-        return response.data;
-      } else if (response.data && Array.isArray(response.data.jobPosts)) {
-        return response.data.jobPosts;
-      } else {
-        console.error("Unexpected response structure:", response.data);
-        return [];
-      }
+     
+      
+      return response.data;
     } catch (error) {
-      console.error("Error fetching job listings:", error);
+      console.error("Error fetching job listings:", error.response || error);
       return rejectWithValue(
         error.response?.data || "Failed to fetch job listings"
       );
     }
   }
 );
-
 export const createJob = createAsyncThunk(
   "restaurant/createJob",
   async (jobData, { getState, rejectWithValue }) => {
@@ -315,12 +306,10 @@ const restaurantSlice = createSlice({
         }
       })
       .addCase(fetchRestaurantJobListings.fulfilled, (state, action) => {
-        if (!state.jobPostsFetched) {
-          state.loading = false;
-          state.error = null;
-          state.jobPosts = action.payload || [];
-          state.jobPostsFetched = true;
-        }
+        state.loading = false;
+        state.error = null;
+        state.jobPosts = action.payload || [];
+        state.jobPostsFetched = true;
       })
       .addCase(fetchRestaurantJobListings.rejected, (state, action) => {
         if (!state.jobPostsFetched) {

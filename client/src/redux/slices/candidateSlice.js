@@ -186,7 +186,6 @@ export const updatePremiumStatus = createAsyncThunk(
   async (_, { getState }) => {
     const token = getAuthToken(getState);
     const userId = getState().candidate.userId;
-    console.log(userId)
     const response = await axios.post(
       `${BASE_URL}/candidates/update-premium-status/${userId}`,
       { userId },
